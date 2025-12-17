@@ -51,7 +51,7 @@ def main():
         print("Les majuscules commencent")
     else:
         IA_camp_est_maj = True
-    print("Les minuscules commencent")
+        print("Les minuscules commencent")
     #Choix de la difficulté
     difficulty = input("Choisissez la difficulté (1-10) : ")
     try:
@@ -69,15 +69,15 @@ def main():
          # Tour de l'IA
          # L'IA joue si c'est son tour en fonction du camp choisi
         if (nbTour % 2 == 0 and IA_camp_est_maj) or (nbTour % 2 == 1 and not IA_camp_est_maj):
-            print("L'IA réfléchit...")
+            print("Le bot réfléchit...")
             coup, score = trouver_meilleur_coup(plateau, Nombre_Profondeur, IA_camp_est_maj)
             if coup is None:
-                print("L'IA ne peut pas jouer. Fin de la partie.")
+                print("Le bot ne peut pas jouer. Fin de la partie.")
                 break
             posInit, posFut = coup
             piece = plateau[posInit[1]][posInit[0]]
             changementPosition(posInit, posFut, piece, plateau)
-            print(f"L'IA a joué de {posInit} à {posFut} avec un score de {score}.")
+            print(f"Le bot a joué de {posInit} à {posFut} avec un score de {score}.")
             nbTour += 1
             if finDePartie(plateau, nbTour):
                 play = False
