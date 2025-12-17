@@ -35,16 +35,6 @@ def changementPosition(posInit, posFut, piece, plateau): #Fonction qui change la
     return True
 
 
-
-def camp(piece: str) -> str | None: # Fonction qui retourne le camp d'une piece
-    """Retourne 'M' (majuscules), 'm' (minuscules) ou None si '.'."""
-    if piece.isupper():
-        return 'M'
-    elif piece.islower():
-        return 'm'
-    else:
-        return None
-
     
 def main():
     plateau = generationPlateau()#Initialisation du plateau
