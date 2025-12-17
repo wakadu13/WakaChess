@@ -1,6 +1,6 @@
 # ia.py
-from geo import ensembleCoupsLegauxMin, ensembleCoupsLegauxMaj
-import random
+from geo import *
+from plateau import *
 
 # --- 1. CONFIGURATION DES VALEURS ET TABLES (PST) ---
 
@@ -51,7 +51,6 @@ def evaluer_plateau(plateau, camp_ia_est_maj):
             score += VALEURS_PIECES.get(piece, 0)
             
             # 2. Valeur Positionnelle (PST)
-            # On inverse l'indice y pour les noirs si nécessaire selon votre logique de grille
             if piece == 'C': # Cavalier Blanc
                 score += PST_CAVALIER[y][x]
             elif piece == 'c': # Cavalier Noir
@@ -67,14 +66,13 @@ def evaluer_plateau(plateau, camp_ia_est_maj):
 def trier_coups(plateau, coups):
     """
     Trie les coups pour l'élagage Alpha-Beta : les captures d'abord !
-    C'est crucial pour la performance.
     """
     score_coups = []
     for posInit, posFut in coups:
         x_fut, y_fut = posFut
         piece_cible = plateau[y_fut][x_fut]
         
-        # Si on mange une pièce, on donne une haute priorité (valeur absolue de la pièce)
+        # Si on mange une pièce, on donne une haute priorité
         valeur_capture = 0
         if piece_cible != '.':
             valeur_capture = abs(VALEURS_PIECES.get(piece_cible, 0)) * 10
@@ -94,26 +92,26 @@ def trouver_meilleur_coup(plateau, profondeur, camp_ia_est_maj):
     else:
         coups_bruts = ensembleCoupsLegauxMin(plateau)
 
-    # Optimisation : Trier les coups pour regarder les captures en premier
     coups_legaux = trier_coups(plateau, coups_bruts)
 
     if not coups_legaux:
         return None, 0
 
     meilleur_score = float('-inf')
-    meilleur_coup = coups_legaux[0] # Par défaut le premier coup trié
+    meilleur_coup = coups_legaux[0]
     alpha = float('-inf')
     beta = float('inf')
 
     for posInit, posFut in coups_legaux:
         # --- DO (Faire le coup) ---
-        piece_capturee = faire_coup_virtuel(plateau, posInit, posFut)
+        # On utilise la version importée "rapide"
+        piece_capturee = faire_coup_rapide(plateau, posInit, posFut)
         
         # Appel récursif
         score = -negamax(plateau, profondeur - 1, -beta, -alpha, not camp_ia_est_maj)
         
         # --- UNDO (Défaire le coup) ---
-        defaire_coup_virtuel(plateau, posInit, posFut, piece_capturee)
+        defaire_coup_rapide(plateau, posInit, posFut, piece_capturee)
 
         if score > meilleur_score:
             meilleur_score = score
@@ -127,21 +125,17 @@ def trouver_meilleur_coup(plateau, profondeur, camp_ia_est_maj):
 
 def negamax(plateau, profondeur, alpha, beta, est_camp_maj):
     """
-    Algorithme Negamax (variante simplifiée de Minimax) avec Alpha-Beta
-    et Recherche de Repos (Quiescence).
+    Algorithme Negamax avec Alpha-Beta et Recherche de Repos.
     """
-    # Si profondeur 0, on lance la recherche de repos pour éviter l'effet d'horizon
     if profondeur == 0:
         return recherche_repos(plateau, alpha, beta, est_camp_maj)
 
-    # Génération des coups
     if est_camp_maj:
         coups = ensembleCoupsLegauxMaj(plateau)
     else:
         coups = ensembleCoupsLegauxMin(plateau)
 
     if not coups:
-        # Vérifier échec et mat ici si possible, sinon retour eval simple
         return evaluer_plateau(plateau, est_camp_maj)
 
     coups = trier_coups(plateau, coups)
@@ -150,27 +144,25 @@ def negamax(plateau, profondeur, alpha, beta, est_camp_maj):
 
     for posInit, posFut in coups:
         # DO
-        piece_capturee = faire_coup_virtuel(plateau, posInit, posFut)
+        piece_capturee = faire_coup_rapide(plateau, posInit, posFut)
         
-        # RECURSION (Note le signe moins et l'inversion alpha/beta)
+        # RECURSION
         score = -negamax(plateau, profondeur - 1, -beta, -alpha, not est_camp_maj)
         
         # UNDO
-        defaire_coup_virtuel(plateau, posInit, posFut, piece_capturee)
+        defaire_coup_rapide(plateau, posInit, posFut, piece_capturee)
 
         max_eval = max(max_eval, score)
         alpha = max(alpha, score)
         if alpha >= beta:
-            break # Élagage
+            break
             
     return max_eval
 
 def recherche_repos(plateau, alpha, beta, est_camp_maj):
     """
-    Quiescence Search : continue de chercher tant qu'il y a des captures.
-    Évite que l'IA s'arrête au milieu d'un échange de pièces.
+    Quiescence Search.
     """
-    # 1. Évaluation "Stand-pat" (si on ne fait rien, quel est le score ?)
     stand_pat = evaluer_plateau(plateau, est_camp_maj)
     
     if stand_pat >= beta:
@@ -178,7 +170,6 @@ def recherche_repos(plateau, alpha, beta, est_camp_maj):
     if alpha < stand_pat:
         alpha = stand_pat
 
-    # 2. On ne regarde QUE les coups de capture
     if est_camp_maj:
         coups = ensembleCoupsLegauxMaj(plateau)
     else:
@@ -191,13 +182,13 @@ def recherche_repos(plateau, alpha, beta, est_camp_maj):
             continue
             
         # DO
-        piece_capturee = faire_coup_virtuel(plateau, posInit, posFut)
+        piece_capturee = faire_coup_rapide(plateau, posInit, posFut)
         
-        # RECURSION QUIESCENCE
+        # RECURSION
         score = -recherche_repos(plateau, -beta, -alpha, not est_camp_maj)
         
         # UNDO
-        defaire_coup_virtuel(plateau, posInit, posFut, piece_capturee)
+        defaire_coup_rapide(plateau, posInit, posFut, piece_capturee)
 
         if score >= beta:
             return beta
@@ -205,25 +196,3 @@ def recherche_repos(plateau, alpha, beta, est_camp_maj):
             alpha = score
             
     return alpha
-
-# --- 4. GESTION PHYSIQUE DU PLATEAU (DO/UNDO) ---
-
-def faire_coup_virtuel(plateau, posInit, posFut):
-    """Applique un coup directement sur le tableau et retourne la pièce mangée."""
-    x1, y1 = posInit
-    x2, y2 = posFut
-    piece = plateau[y1][x1]
-    capture = plateau[y2][x2]
-    
-    plateau[y2][x2] = piece
-    plateau[y1][x1] = '.'
-    return capture
-
-def defaire_coup_virtuel(plateau, posInit, posFut, capture):
-    """Annule le coup et remet la pièce capturée."""
-    x1, y1 = posInit
-    x2, y2 = posFut
-    piece = plateau[y2][x2]
-    
-    plateau[y1][x1] = piece
-    plateau[y2][x2] = capture

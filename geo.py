@@ -1,6 +1,6 @@
 #Geo.py permet de gérer la géométrie du jeu d'échecs c'est à dire les déplacements des pièces et la vérification des coups légaux
 
-from plateau import CopiePlateau, deplacer_piece_physique
+from plateau import *
   
 def positionPossiblePion(x, y, plateau): #Determine les positions possibles pour un pion
     if plateau[y][x].isupper():#Détermine si la piece est une majuscule ou une minuscule
@@ -234,17 +234,18 @@ def estEchec(plateau, pieceRoi):#Permet de savoir si le roi est en échec
 
 
 def CoupLegal(plateau, posInit, posFut): #Permet de vérifier si un coup est légal
-    newPlateau = CopiePlateau(plateau)
     piece = plateau[posInit[1]][posInit[0]]
     if piece == ".":
         return False
     positionPossible = index_fonction[piece](posInit[0], posInit[1], plateau)
     if posFut not in positionPossible:
         return False
-    deplacer_piece_physique(posInit, posFut, piece, newPlateau)#Simule le déplacement
+    piece_capturee = faire_coup_rapide(plateau, posInit, posFut)#Simule le déplacement
     pieceRoi = 'R' if piece.isupper() else 'r'
-    if estEchec(newPlateau, pieceRoi):#Permet de vérifier si le roi est en échec après le déplacement
+    if estEchec(plateau, pieceRoi):#Permet de vérifier si le roi est en échec après le déplacement
+        defaire_coup_rapide(plateau, posInit, posFut, piece_capturee)#Annule le déplacement
         return False
+    defaire_coup_rapide(plateau, posInit, posFut, piece_capturee)
     return True
 
 def ensembleCoupsLegauxMin(plateau):#Permet de trouver tous les coups légaux pour les minuscules
