@@ -3,44 +3,37 @@ from plateau import *
 from utilitaire import *
 from geo import *
 from ia import *
+import time
 
-def changementPosition(posInit, posFut, piece, plateau, est_ia=False): 
-    """
-    Gère le déplacement d'une pièce, le roque, et la promotion.
-    """
-    # 1. Vérifier si le coup est légal (Geo.py)
-    if not CoupLegal(plateau, posInit, posFut):
-        return False
+
+
+def changementPosition(posInit, posFut, piece, plateau, est_ia=False):
+    global case_en_passant, compteur_50_coups
     
-    # 2. Exécuter le mouvement complet (Gère le saut de la tour si c'est un roque)
-    # droits_roque doit être défini dans plateau.py pour être accessible partout
-    executer_mouvement_complet(plateau, posInit, posFut, droits_roque)
+    if not CoupLegal(plateau, posInit, posFut): return False
     
-    # 3. Gestion de la promotion du pion
-    yFut = posFut[1]
-    # Pour les Blancs (Majuscules)
-    if piece == "P" and yFut == 7:
-        if est_ia:
-            plateau[yFut][posFut[0]] = "D"
-            print("Promotion IA : Reine (D)")
-        else:
-            c = input("Promotion ! Choisissez D, T, F ou C : ")
-            plateau[yFut][posFut[0]] = c.upper() if c.upper() in "DTFC" else "D"
-            
-    # Pour les Noirs (Minuscules)
-    elif piece == "p" and yFut == 0:
-        if est_ia:
-            plateau[yFut][posFut[0]] = "d"
-            print("Promotion IA : dame (d)")
-        else:
-            c = input("Promotion ! Choisissez d, t, f ou c : ")
-            plateau[yFut][posFut[0]] = c.lower() if c.lower() in "dtfc" else "d"
-        # Dans changementPosition
-    global case_en_passant
-    if piece.upper() == "P" and abs(posFut[1] - posInit[1]) == 2:
+    # Détection capture en passant (si le roi va sur la case vide de l'en-passant)
+    if piece.upper() == 'P' and posFut == case_en_passant:
+        # On supprime le pion adverse qui est juste derrière
+        plateau[posInit[1]][posFut[0]] = "."
+
+    # Mise à jour du compteur 50 coups
+    # Si pion bouge ou capture, on remet à zéro, sinon +1
+    if piece.upper() == 'P' or plateau[posFut[1]][posFut[0]] != ".":
+        compteur_50_coups = 0
+    else:
+        compteur_50_coups += 1
+
+    # Définir la case en passant pour le PROCHAIN tour
+    if piece.upper() == 'P' and abs(posFut[1] - posInit[1]) == 2:
         case_en_passant = (posInit[0], (posInit[1] + posFut[1]) // 2)
     else:
         case_en_passant = None
+
+    # Exécution du mouvement
+    executer_mouvement_complet(plateau, posInit, posFut, droits_roque)
+    
+    # ... (reste du code pour promotion) ...
     return True
 historique_positions = []
 
@@ -81,6 +74,11 @@ def main():
         print("Niveau par défaut (3) sélectionné.")
 
     while play:
+        # Dans ta boucle while play :
+        debut_reflexion = time.time()
+        # On réduit la profondeur si l'IA a mis trop de temps au tour précédent
+        temps_ia = 10.0 # limite de 10 secondes par coup
+        coup, score = trouver_meilleur_coup(plateau, Nombre_Profondeur, IA_camp_est_maj, debut_reflexion, temps_ia)
         print("\n" + "="*20)
         print(f"TOUR NUMERO : {nbTour}")
         affichagePlateau(plateau)
@@ -136,15 +134,28 @@ def main():
                         print("Coup illégal ! Vérifiez les règles.")
                 else:
                     print("Format invalide. Exemple: 3 6 3 4")
+        
             except Exception as e:
                 print(f"Erreur de saisie : {e}")
+
 
         # Vérification de fin de partie
         if finDePartie(plateau, nbTour):
             affichagePlateau(plateau)
             play = False
+        # Dans main.py, après nbTour += 1
+        etat_plateau = str(plateau)
+        historique_positions.append(etat_plateau)
+
+        if historique_positions.count(etat_plateau) >= 3:
+            print("Nulle par répétition !")
+            play = False
+        elif compteur_50_coups >= 100: # 50 coups par camp = 100 demi-coups
+            print("Nulle (règle des 50 coups) !")
+            play = False
 
     print("Merci d'avoir joué à WakaChess !")
+
 
 if __name__ == "__main__":
     main()

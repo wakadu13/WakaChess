@@ -4,6 +4,12 @@ droits_roque = {
 }
 # Dans plateau.py
 case_en_passant = None  # Stockera (x, y) de la case derrière le pion ayant sauté
+# Variables globales de suivi
+case_en_passant = None  # Stocke (x, y) de la case de capture "au vol"
+compteur_50_coups = 0    # Pour la règle de la nulle
+historique_positions = [] # Pour la triple répétition
+droits_roque = {'R': True, 'T_gauche': True, 'T_droite': True, 
+                'r': True, 't_gauche': True, 't_droite': True}
 def generationPlateau(): #Génération du plateau de jeu
     Pion = ['P' for i in range(8)]
     pion = ['p' for i in range(8)]
