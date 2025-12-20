@@ -1,325 +1,224 @@
-#Geo.py permet de gérer la géométrie du jeu d'échecs c'est à dire les déplacements des pièces et la vérification des coups légaux
-
+# Geo.py - Gestion de la géométrie et des coups légaux
 from plateau import *
-  
-def positionPossiblePion(x, y, plateau): #Determine les positions possibles pour un pion
-    if plateau[y][x].isupper():#Détermine si la piece est une majuscule ou une minuscule
-        estEnnemie = str.islower#Aide de l'ia pour trouver la fonctionnalité
+
+# --- FONCTIONS DE DÉPLACEMENT ---
+
+def positionPossiblePion(x, y, plateau):
+    if plateau[y][x].isupper():
+        estEnnemie = str.islower
         decallage = 1
         posDepart = 1
     elif plateau[y][x].islower():
         estEnnemie = str.isupper
         decallage = -1
         posDepart = 6
+    else: return []
+
     possibilite = []
-    #Fonctionnalités du double déplacement au premier coup
-    if (0 <= y + 2*decallage <= 7) and y == posDepart and plateau[y + 2*decallage][x] == "." and  plateau[y + decallage][x] == ".":
+    # Double déplacement
+    if (0 <= y + 2*decallage <= 7) and y == posDepart and plateau[y + 2*decallage][x] == "." and plateau[y + decallage][x] == ".":
         possibilite.append((x, y+2*decallage))
-    #Déplacement simple
-    if ((0 <= y + decallage <= 7)) and plateau[y + decallage][x] == ".":
+    # Simple déplacement
+    if (0 <= y + decallage <= 7) and plateau[y + decallage][x] == ".":
         possibilite.append((x, y+decallage))
-    #Prise en diagonale
-    if ((0 <= x + 1 <= 7)) and ((0 <= y + decallage <= 7)) and estEnnemie(plateau[y + decallage][x + 1]):
-        possibilite.append((x + 1, y + decallage))
-    #Prise en diagonale
-    if ((0 <= x - 1 <= 7)) and ((0 <= y + decallage <= 7)) and estEnnemie(plateau[y + decallage][x - 1]):
-        possibilite.append((x - 1, y + decallage))
+    # Prises en diagonale
+    for dx in [-1, 1]:
+        if (0 <= x + dx <= 7) and (0 <= y + decallage <= 7) and estEnnemie(plateau[y + decallage][x + dx]):
+            possibilite.append((x + dx, y + decallage))
     return possibilite
-    
-def positionPossibleTour(x, y, plateau): #Permet de trouver les positions possibles pour une tour
+
+def positionPossibleTour(x, y, plateau):
     if plateau[y][x].isupper():
-        estAllie = str.isupper #Aide de l'ia pour trouver la fonctionnalité
-        estEnnemie = str.islower
-    elif plateau[y][x].islower():
-        estAllie = str.islower
-        estEnnemie = str.isupper
+        estAllie, estEnnemie = str.isupper, str.islower
+    else:
+        estAllie, estEnnemie = str.islower, str.isupper
+    
     possibilite = []
-    for i in range(x+1, 8): #Droite
-        if estAllie(plateau[y][i]):
-            break
-        possibilite.append((i, y))
-        if estEnnemie(plateau[y][i]):
-            break
-    for i in range(x-1, -1, -1): #Gauche
-        if estAllie(plateau[y][i]):
-            break
-        possibilite.append((i, y))
-        if estEnnemie(plateau[y][i]):
-            break
-    for i in range(y+1, 8):#Bas
-        if estAllie(plateau[i][x]):
-            break
-        possibilite.append((x, i))
-        if estEnnemie(plateau[i][x]):
-            break
-    for i in range(y-1, -1, -1):#Haut
-        if estAllie(plateau[i][x]):
-            break
-        possibilite.append((x, i))
-        if estEnnemie(plateau[i][x]):
-            break
-    return possibilite
-
-def positionPossibleCavalier(x, y, plateau):#Permet de trouver les positions possibles pour un cavalier
-    #On définit toutes les positions possibles du cavalier
-    possibilite = [(x-1, y-2), (x+1, y-2),(x+2, y-1), (x+2, y+1), (x+1, y+2), (x-1, y+2), (x-2, y+1), (x-2, y-1)]
-    #On vérifie que les positions sont valides (dans le plateau et pas alliées)
-    vpossibilite = []
-    if plateau[y][x].islower():
-        estAllie = str.islower
-    else:
-        estAllie = str.isupper
-    for i in range(len(possibilite)): #On parcourt les positions possibles
-        u, v = possibilite[i][0], possibilite[i][1]
-        if not(0 <= v <= 7 and 0 <= u <= 7):#On vérifie que la position est dans le plateau
-            continue
-        if estAllie(plateau[v][u]):#On vérifie que la position n'est pas alliée
-            continue
-        vpossibilite.append(possibilite[i])#On ajoute la position valide à la liste
-    return vpossibilite
-
-def positionPossibleFou(x, y, plateau):#Permet de trouver les positions possibles pour un fou
-    if plateau[y][x].islower():#Détermine si la piece est une majuscule ou une minuscule
-        estAllie = str.islower
-        estEnnemie = str.isupper
-    else:
-        estAllie = str.isupper
-        estEnnemie = str.islower
-    possibilite = []#Liste des positions possibles
-    direction = [(-1, -1), (1, -1), (-1, 1), (1, 1)]#Directions possibles pour le fou
-    for dx, dy in direction:#On parcourt chaque direction
+    for dx, dy in [(1,0), (-1,0), (0,1), (0,-1)]:
         for i in range(1, 8):
-            posX, posY = x+dx*i, y+dy*i#Calcul de la nouvelle position
-            if not(0 <= posX <= 7 and 0 <= posY <= 7):
-                break
-            if estAllie(plateau[posY][posX]):
-                break
-            if estEnnemie(plateau[posY][posX]):
-                possibilite.append((posX, posY)) 
-                break
-            else:
-                possibilite.append((posX, posY))
+            nx, ny = x + dx*i, y + dy*i
+            if not (0 <= nx <= 7 and 0 <= ny <= 7) or estAllie(plateau[ny][nx]): break
+            possibilite.append((nx, ny))
+            if estEnnemie(plateau[ny][nx]): break
     return possibilite
-def positionPossibleReine(x, y, plateau):#Permet de trouver les positions possibles pour une reine
-    p1 = positionPossibleFou(x, y, plateau)
-    p2 = positionPossibleTour(x, y, plateau)
-    return p1 + p2
+
+def positionPossibleCavalier(x, y, plateau):
+    poss = [(x-1,y-2),(x+1,y-2),(x+2,y-1),(x+2,y+1),(x+1,y+2),(x-1,y+2),(x-2,y+1),(x-2,y-1)]
+    estAllie = str.islower if plateau[y][x].islower() else str.isupper
+    res = []
+    for u, v in poss:
+        if 0 <= u <= 7 and 0 <= v <= 7 and not estAllie(plateau[v][u]):
+            res.append((u, v))
+    return res
+
+def positionPossibleFou(x, y, plateau):
+    if plateau[y][x].islower():
+        estAllie, estEnnemie = str.islower, str.isupper
+    else:
+        estAllie, estEnnemie = str.isupper, str.islower
+    possibilite = []
+    for dx, dy in [(-1,-1), (1,-1), (-1,1), (1,1)]:
+        for i in range(1, 8):
+            nx, ny = x + dx*i, y + dy*i
+            if not (0 <= nx <= 7 and 0 <= ny <= 7) or estAllie(plateau[ny][nx]): break
+            possibilite.append((nx, ny))
+            if estEnnemie(plateau[ny][nx]): break
+    return possibilite
+
+def positionPossibleReine(x, y, plateau):
+    return positionPossibleFou(x, y, plateau) + positionPossibleTour(x, y, plateau)
+
+# --- GESTION DU ROI ET DU ROQUE ---
+
 def est_case_attaquee(plateau, pos, est_roi_maj):
-    # On regarde si la case 'pos' (x, y) est dans les zones de contrôle ennemies
-    attaques_ennemies = possibiliteDeplacementMin(plateau) if est_roi_maj else possibiliteDeplacementMaj(plateau)
-    for zone in attaques_ennemies:
-        if pos in zone:
-            return True
+    # Important : on utilise les attaques simplifiées pour éviter la récursion infinie
+    attaques = possibiliteDeplacementMin(plateau) if est_roi_maj else possibiliteDeplacementMaj(plateau)
+    for zone in attaques:
+        if pos in zone: return True
     return False
 
 def positionPossibleRoi(x, y, plateau):
     possibilite = []
-    # 1. Déplacements classiques (1 case autour)
-    for i in range(-1, 2):
-        for j in range(-1, 2):
-            if (i,j) != (0, 0):
-                possibilite.append((x+i,y+j))
+    # 1. Déplacements standards
+    for dx in [-1, 0, 1]:
+        for dy in [-1, 0, 1]:
+            if dx == 0 and dy == 0: continue
+            nx, ny = x + dx, y + dy
+            if 0 <= nx <= 7 and 0 <= ny <= 7:
+                possibilite.append((nx, ny))
     
-    vpossibilite = []
     piece = plateau[y][x]
     est_maj = piece.isupper()
+    estAllie = str.isupper if est_maj else str.islower
+    vpossibilite = []
     
-    # Déterminer qui est l'ennemi pour vérifier les échecs
-    if est_maj:
-        estAllie = str.isupper
-        posEnnemie = possibiliteDeplacementMin(plateau)
-        roi_carac = 'R'
-        tour_carac = 'T'
-        ligne = 0
-    else:
-        estAllie = str.islower
-        posEnnemie = possibiliteDeplacementMaj(plateau)
-        roi_carac = 'r'
-        tour_carac = 't'
-        ligne = 7
-
-    # 2. Filtrer les cases hors plateau, alliées ou attaquées
+    # Filtrage des cases (alliées ou échecs)
     for u, v in possibilite:
-        if not(0 <= v <= 7 and 0 <= u <= 7): continue
-        if estAllie(plateau[v][u]): continue
-        
-        # Vérification si la case est attaquée
-        attaque = False
-        for elmt in posEnnemie:
-            if (u,v) in elmt:
-                attaque = True
-                break
-        if not attaque:
-            vpossibilite.append((u, v))
+        if not estAllie(plateau[v][u]):
+            # On vérifie si la case destination est attaquée (le roi ne peut se mettre en échec)
+            if not est_case_attaquee(plateau, (u, v), est_maj):
+                vpossibilite.append((u, v))
 
-    # --- 3. LOGIQUE DU ROQUE (ADAPTÉE ROI EN X=3) ---
-    # Le Roi est sur sa case de départ et n'est pas en échec
+    # --- 2. LE ROQUE (ROI EN X=3) ---
+    ligne = 0 if est_maj else 7
+    roi_carac = 'R' if est_maj else 'r'
+    tour_carac = 'T' if est_maj else 't'
+
     if y == ligne and x == 3 and droits_roque[roi_carac] and not estEchec(plateau, roi_carac):
-        
-        # PETIT ROQUE (Vers la Tour en 0,0 ou 0,7)
-        # On vérifie les cases vides entre la tour (0) et le roi (3) : colonnes 1 et 2
+        # Petit Roque (Vers la gauche, x=0)
         if droits_roque[tour_carac + '_gauche'] and plateau[ligne][1] == "." and plateau[ligne][2] == ".":
-            # Le roi ne doit pas passer par une case attaquée (ici la case 2)
             if not est_case_attaquee(plateau, (2, ligne), est_maj):
                 vpossibilite.append((1, ligne))
-
-        # GRAND ROQUE (Vers la Tour en 7,0 ou 7,7)
-        # On vérifie les cases vides entre le roi (3) et la tour (7) : colonnes 4, 5 et 6
+        
+        # Grand Roque (Vers la droite, x=7)
         if droits_roque[tour_carac + '_droite'] and plateau[ligne][4] == "." and plateau[ligne][5] == "." and plateau[ligne][6] == ".":
-            # Le roi ne doit pas passer par une case attaquée (ici la case 4)
             if not est_case_attaquee(plateau, (4, ligne), est_maj):
                 vpossibilite.append((5, ligne))
                 
     return vpossibilite
 
-index_fonction = { #gestion des déplacements possibles
-    'P': positionPossiblePion,#Aide de l'ia pour trouver la fonctionnalité
-    'p': positionPossiblePion,
-    'T': positionPossibleTour,
-    't': positionPossibleTour,
-    'C': positionPossibleCavalier,
-    'c': positionPossibleCavalier,
-    'F': positionPossibleFou,
-    'f': positionPossibleFou,
-    'D': positionPossibleReine,
-    'd': positionPossibleReine,
-    'R': positionPossibleRoi,
-    'r': positionPossibleRoi
+# --- DICTIONNAIRE ET ANALYSE GLOBALE ---
+
+index_fonction = {
+    'P': positionPossiblePion, 'p': positionPossiblePion,
+    'T': positionPossibleTour, 't': positionPossibleTour,
+    'C': positionPossibleCavalier, 'c': positionPossibleCavalier,
+    'F': positionPossibleFou, 'f': positionPossibleFou,
+    'D': positionPossibleReine, 'd': positionPossibleReine,
+    'R': positionPossibleRoi, 'r': positionPossibleRoi
 }
 
-def possibiliteDeplacementMaj(plateau):#Permet de trouver les positions possibles pour les majuscules
-    positionPossible = []
-    for j in range(8):
-        for i in range(8):
-            piece = plateau[j][i]
-            if piece == "." or piece.islower() :
-                positionPossible.append([])
-            elif piece == 'R':
-                positionPossible.append(attaquesRoi(i,j,plateau))
-            else:
-                if piece == "P":
-                    positionPossible.append(attaquesPion(i,j,plateau))
-                else:
-                    positionPossible.append(index_fonction[piece](i, j, plateau))
-    return positionPossible
-
-def possibiliteDeplacementMin(plateau):#Permet de trouver les positions possibles pour les minuscules
-    positionPossible = []
-    for j in range(8):
-        for i in range(8):
-            piece = plateau[j][i]
-            if piece == "." or piece.isupper():
-                positionPossible.append([])
-            elif piece == 'r':
-                positionPossible.append(attaquesRoi(i,j,plateau))
-            else:
-                if piece == "p":
-                    positionPossible.append(attaquesPion(i,j,plateau))
-                else:
-                    positionPossible.append(index_fonction[piece](i, j, plateau))
-    return positionPossible
-
-def attaquesPion(x, y, plateau): #Permet de trouver les positions d'attaque pour un pion
-    piece = plateau[y][x]
-    if piece == "P":
-        dy = 1
-    else:  # "p"
-        dy = -1
-    attaques = []
-    for dx in (-1, 1):
-        nx, ny = x + dx, y + dy
-        if 0 <= nx <= 7 and 0 <= ny <= 7:
-            attaques.append((nx, ny))
-    return attaques
-
-def attaquesRoi(x, y, plateau):#Permet de trouver les positions d'attaque pour un roi
-    piece = plateau[y][x]
-    estAllie = str.islower if piece.islower() else str.isupper
+def possibiliteDeplacementMaj(plateau):
     res = []
-    for dy in (-1, 0, 1):
-        for dx in (-1, 0, 1):
-            if dx == 0 and dy == 0:
-                continue
-            nx, ny = x + dx, y + dy
-            if not (0 <= nx <= 7 and 0 <= ny <= 7):
-                continue
-            if estAllie(plateau[ny][nx]):
-                continue
-            res.append((nx, ny))
+    for j in range(8):
+        for i in range(8):
+            p = plateau[j][i]
+            if p.isupper():
+                if p == 'R': res.append(attaquesRoi(i, j, plateau))
+                elif p == 'P': res.append(attaquesPion(i, j, plateau))
+                else: res.append(index_fonction[p](i, j, plateau))
+            else: res.append([])
     return res
 
-
-def trouverRoi(plateau, pieceRoi):#Permet de trouver la position du roi
+def possibiliteDeplacementMin(plateau):
+    res = []
     for j in range(8):
         for i in range(8):
-            if plateau[j][i] == pieceRoi:
-                return (i, j)
+            p = plateau[j][i]
+            if p.islower():
+                if p == 'r': res.append(attaquesRoi(i, j, plateau))
+                elif p == 'p': res.append(attaquesPion(i, j, plateau))
+                else: res.append(index_fonction[p](i, j, plateau))
+            else: res.append([])
+    return res
+
+# Fonctions d'attaques simplifiées pour éviter la récursion infinie dans estEchec
+def attaquesPion(x, y, plateau):
+    dy = 1 if plateau[y][x] == 'P' else -1
+    res = []
+    for dx in [-1, 1]:
+        if 0 <= x+dx <= 7 and 0 <= y+dy <= 7: res.append((x+dx, y+dy))
+    return res
+
+def attaquesRoi(x, y, plateau):
+    res = []
+    for dx in [-1,0,1]:
+        for dy in [-1,0,1]:
+            if dx == 0 and dy == 0: continue
+            if 0 <= x+dx <= 7 and 0 <= y+dy <= 7: res.append((x+dx, y+dy))
+    return res
+
+def trouverRoi(plateau, pieceRoi):
+    for j in range(8):
+        for i in range(8):
+            if plateau[j][i] == pieceRoi: return (i, j)
     return None
 
-
-def estEchec(plateau, pieceRoi):#Permet de savoir si le roi est en échec
+def estEchec(plateau, pieceRoi):
     posRoi = trouverRoi(plateau, pieceRoi)
-    if posRoi is None:
-        return False
-    posEnnemie = possibiliteDeplacementMin(plateau) if pieceRoi.isupper() else possibiliteDeplacementMaj(plateau)
-    for elmt in posEnnemie:
-        for pos in elmt:
-            if pos == posRoi:
-                return True
-    return False
+    if not posRoi: return False
+    return est_case_attaquee(plateau, posRoi, pieceRoi.isupper())
 
-
-def CoupLegal(plateau, posInit, posFut): #Permet de vérifier si un coup est légal
+def CoupLegal(plateau, posInit, posFut):
     piece = plateau[posInit[1]][posInit[0]]
-    if piece == ".":
-        return False
-    positionPossible = index_fonction[piece](posInit[0], posInit[1], plateau)
-    if posFut not in positionPossible:
-        return False
-    piece_capturee = faire_coup_rapide(plateau, posInit, posFut)#Simule le déplacement
-    pieceRoi = 'R' if piece.isupper() else 'r'
-    if estEchec(plateau, pieceRoi):#Permet de vérifier si le roi est en échec après le déplacement
-        defaire_coup_rapide(plateau, posInit, posFut, piece_capturee)#Annule le déplacement
-        return False
-    defaire_coup_rapide(plateau, posInit, posFut, piece_capturee)
-    return True
+    if piece == ".": return False
+    if posFut not in index_fonction[piece](posInit[0], posInit[1], plateau): return False
+    
+    # Simulation
+    piece_cap = faire_coup_rapide(plateau, posInit, posFut)
+    roi = 'R' if piece.isupper() else 'r'
+    echec = estEchec(plateau, roi)
+    defaire_coup_rapide(plateau, posInit, posFut, piece_cap)
+    return not echec
 
-def ensembleCoupsLegauxMin(plateau):#Permet de trouver tous les coups légaux pour les minuscules
-    coupsLegaux = []
+def ensembleCoupsLegauxMin(plateau):
+    coups = []
     for j in range(8):
         for i in range(8):
-            piece = plateau[j][i]
-            if piece.islower():
-                positionPossible = index_fonction[piece](i, j, plateau)
-                for posFut in positionPossible:
-                    if CoupLegal(plateau, (i,j), posFut):
-                        coupsLegaux.append( ((i,j), posFut) )
-    return coupsLegaux
+            if plateau[j][i].islower():
+                for pf in index_fonction[plateau[j][i]](i, j, plateau):
+                    if CoupLegal(plateau, (i,j), pf): coups.append(((i,j), pf))
+    return coups
 
-
-def ensembleCoupsLegauxMaj(plateau):#Permet de trouver tous les coups légaux pour les majuscules
-    coupsLegaux = []
+def ensembleCoupsLegauxMaj(plateau):
+    coups = []
     for j in range(8):
         for i in range(8):
-            piece = plateau[j][i]
-            if piece.isupper():
-                positionPossible = index_fonction[piece](i, j, plateau)
-                for posFut in positionPossible:
-                    if CoupLegal(plateau, (i,j), posFut):
-                        coupsLegaux.append( ((i,j), posFut) )
-    return coupsLegaux
+            if plateau[j][i].isupper():
+                for pf in index_fonction[plateau[j][i]](i, j, plateau):
+                    if CoupLegal(plateau, (i,j), pf): coups.append(((i,j), pf))
+    return coups
 
-def finDePartie(plateau, nbTour):#Permet de vérifier si la partie est terminée
-    if nbTour % 2 == 0:
-        coupsLegaux = ensembleCoupsLegauxMin(plateau)
-        pieceRoi = 'r'
-    else:
-        coupsLegaux = ensembleCoupsLegauxMaj(plateau)
-        pieceRoi = 'R'
-    if len(coupsLegaux) == 0:
-        if estEchec(plateau, pieceRoi):
-            print("Echec et mat ! Le camp ", "Majuscules" if pieceRoi == 'r' else "Minuscules", " a gagné.")
+def finDePartie(plateau, nbTour):
+    est_tour_min = (nbTour % 2 == 1) # Car tu as dit que les noirs commencent au tour 0 ou 1 ? 
+    # Attention : ajuste selon ta boucle main. Si tour 0 = blancs, alors pair = maj, impair = min.
+    coups = ensembleCoupsLegauxMin(plateau) if nbTour % 2 != 0 else ensembleCoupsLegauxMaj(plateau)
+    roi = 'r' if nbTour % 2 != 0 else 'R'
+    
+    if not coups:
+        if estEchec(plateau, roi):
+            print("Echec et mat !")
         else:
-            print("Pat ! Match nul.")
+            print("Pat !")
         return True
     return False
