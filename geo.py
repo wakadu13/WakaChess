@@ -25,6 +25,12 @@ def positionPossiblePion(x, y, plateau):
     for dx in [-1, 1]:
         if (0 <= x + dx <= 7) and (0 <= y + decallage <= 7) and estEnnemie(plateau[y + decallage][x + dx]):
             possibilite.append((x + dx, y + decallage))
+    # AJOUT : Vérification de la prise en passant
+    if case_en_passant:
+        cx, cy = case_en_passant
+        # Si la case en passant est en diagonale immédiate
+        if abs(cx - x) == 1 and cy == (y + decallage):
+            possibilite.append((cx, cy))
     return possibilite
 
 def positionPossibleTour(x, y, plateau):

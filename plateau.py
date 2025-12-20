@@ -2,7 +2,8 @@ droits_roque = {
     'R': True, 'T_gauche': True, 'T_droite': True, # Majuscules (Blancs)
     'r': True, 't_gauche': True, 't_droite': True  # Minuscules (Noirs)
 }
-
+# Dans plateau.py
+case_en_passant = None  # Stockera (x, y) de la case derrière le pion ayant sauté
 def generationPlateau(): #Génération du plateau de jeu
     Pion = ['P' for i in range(8)]
     pion = ['p' for i in range(8)]

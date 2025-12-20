@@ -35,9 +35,25 @@ def changementPosition(posInit, posFut, piece, plateau, est_ia=False):
         else:
             c = input("Promotion ! Choisissez d, t, f ou c : ")
             plateau[yFut][posFut[0]] = c.lower() if c.lower() in "dtfc" else "d"
-        
+        # Dans changementPosition
+    global case_en_passant
+    if piece.upper() == "P" and abs(posFut[1] - posInit[1]) == 2:
+        case_en_passant = (posInit[0], (posInit[1] + posFut[1]) // 2)
+    else:
+        case_en_passant = None
     return True
+historique_positions = []
 
+def verifier_nulle(plateau):
+    # Convertir le plateau (liste de listes) en chaîne de caractères pour le comparer
+    etat_actuel = str(plateau)
+    historique_positions.append(etat_actuel)
+    
+    # Répétition 3 fois
+    if historique_positions.count(etat_actuel) >= 3:
+        print("Match nul par répétition !")
+        return True
+    return False
 def main():
     # Initialisation du jeu
     plateau = generationPlateau()

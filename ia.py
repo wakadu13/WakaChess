@@ -1,6 +1,7 @@
 # ia.py
 from geo import *
 from plateau import *
+import time
 
 # --- 1. CONFIGURATION DES VALEURS ET TABLES (PST) ---
 
@@ -200,3 +201,18 @@ def recherche_repos(plateau, alpha, beta, est_camp_maj):
             alpha = score
             
     return alpha
+
+def trouver_meilleur_coup(plateau, profondeur_max, camp_ia_est_maj, temps_limite=30.0):
+    debut = time.time()
+    meilleur_coup = None
+    
+    # On utilise l'Iterative Deepening : on cherche à prof 1, puis 2, puis 3...
+    for d in range(1, profondeur_max + 1):
+        # Si on a déjà consommé plus de 70% du temps, on n'entame pas une nouvelle profondeur
+        if time.time() - debut > temps_limite * 0.7:
+            break
+            
+        coup, score = minimax_alpha_beta(...) # Ton appel actuel
+        meilleur_coup = coup
+        
+    return meilleur_coup, score
