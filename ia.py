@@ -60,6 +60,10 @@ def evaluer_plateau(plateau, camp_ia_est_maj):
                 score += PST_PION[y][x]
             elif piece == 'p': # Pion Noir
                 score -= PST_PION[7-y][x]
+            # Bonus pour le roque (encourager l'IA à mettre son roi à l'abri)
+    # On vérifie si le roi n'est plus sur sa case de départ (souvent signe de roque)
+    if plateau[0][6] == 'R' or plateau[0][2] == 'R': score += 40
+    if plateau[7][6] == 'r' or plateau[7][2] == 'r': score -= 40
 
     return score if camp_ia_est_maj else -score
 

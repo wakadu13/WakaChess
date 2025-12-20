@@ -104,38 +104,74 @@ def positionPossibleReine(x, y, plateau):#Permet de trouver les positions possib
     p1 = positionPossibleFou(x, y, plateau)
     p2 = positionPossibleTour(x, y, plateau)
     return p1 + p2
+def est_case_attaquee(plateau, pos, est_roi_maj):
+    # On regarde si la case 'pos' (x, y) est dans les zones de contrôle ennemies
+    attaques_ennemies = possibiliteDeplacementMin(plateau) if est_roi_maj else possibiliteDeplacementMaj(plateau)
+    for zone in attaques_ennemies:
+        if pos in zone:
+            return True
+    return False
 
-def positionPossibleRoi(x, y, plateau):#Permet de trouver les positions possibles pour un roi
+def positionPossibleRoi(x, y, plateau):
     possibilite = []
+    # 1. Déplacements classiques (1 case autour)
     for i in range(-1, 2):
         for j in range(-1, 2):
             if (i,j) != (0, 0):
                 possibilite.append((x+i,y+j))
+    
     vpossibilite = []
-    if plateau[y][x].islower():#Détermine si la piece est une majuscule ou une minuscule
-        estAllie = str.islower
-        posEnnemie = possibiliteDeplacementMaj(plateau)
-    else:
+    piece = plateau[y][x]
+    est_maj = piece.isupper()
+    
+    # Déterminer qui est l'ennemi pour vérifier les échecs
+    if est_maj:
         estAllie = str.isupper
         posEnnemie = possibiliteDeplacementMin(plateau)
-    for i in range(len(possibilite)):#On parcourt les positions possibles
-        u, v = possibilite[i][0], possibilite[i][1]#On vérifie que les positions sont valides (dans le plateau et pas alliées)
-        if not(0 <= v <= 7 and 0 <= u <= 7):
-            continue
-        if estAllie(plateau[v][u]):
-            continue
+        roi_carac = 'R'
+        tour_carac = 'T'
+        ligne = 0
+    else:
+        estAllie = str.islower
+        posEnnemie = possibiliteDeplacementMaj(plateau)
+        roi_carac = 'r'
+        tour_carac = 't'
+        ligne = 7
+
+    # 2. Filtrer les cases hors plateau, alliées ou attaquées
+    for u, v in possibilite:
+        if not(0 <= v <= 7 and 0 <= u <= 7): continue
+        if estAllie(plateau[v][u]): continue
+        
+        # Vérification si la case est attaquée
         attaque = False
-        for elmt in posEnnemie:#On vérifie que la position n'est pas attaquée
-            for pos in elmt:
-                if (u,v) == pos:
-                    attaque = True
-                    break
-            if attaque:
+        for elmt in posEnnemie:
+            if (u,v) in elmt:
+                attaque = True
                 break
-        if attaque:
-            continue
-        vpossibilite.append(possibilite[i])
+        if not attaque:
+            vpossibilite.append((u, v))
+
+    # --- 3. LOGIQUE DU ROQUE (ADAPTÉE ROI EN X=3) ---
+    # Le Roi est sur sa case de départ et n'est pas en échec
+    if y == ligne and x == 3 and droits_roque[roi_carac] and not estEchec(plateau, roi_carac):
+        
+        # PETIT ROQUE (Vers la Tour en 0,0 ou 0,7)
+        # On vérifie les cases vides entre la tour (0) et le roi (3) : colonnes 1 et 2
+        if droits_roque[tour_carac + '_gauche'] and plateau[ligne][1] == "." and plateau[ligne][2] == ".":
+            # Le roi ne doit pas passer par une case attaquée (ici la case 2)
+            if not est_case_attaquee(plateau, (2, ligne), est_maj):
+                vpossibilite.append((1, ligne))
+
+        # GRAND ROQUE (Vers la Tour en 7,0 ou 7,7)
+        # On vérifie les cases vides entre le roi (3) et la tour (7) : colonnes 4, 5 et 6
+        if droits_roque[tour_carac + '_droite'] and plateau[ligne][4] == "." and plateau[ligne][5] == "." and plateau[ligne][6] == ".":
+            # Le roi ne doit pas passer par une case attaquée (ici la case 4)
+            if not est_case_attaquee(plateau, (4, ligne), est_maj):
+                vpossibilite.append((5, ligne))
+                
     return vpossibilite
+
 index_fonction = { #gestion des déplacements possibles
     'P': positionPossiblePion,#Aide de l'ia pour trouver la fonctionnalité
     'p': positionPossiblePion,

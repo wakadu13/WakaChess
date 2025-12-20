@@ -20,18 +20,25 @@ from utilitaire import *
 from geo import *
 from ia import *
 
+# À initialiser au début de votre programme principal
 
-def changementPosition(posInit, posFut, piece, plateau): #Fonction qui change la position d'une piece si le coup est legal
+def changementPosition(posInit, posFut, piece, plateau): 
+    # 1. Vérifier si le coup est légal
     if CoupLegal(plateau, posInit, posFut) == False:
         return False
-    deplacer_piece_physique(posInit, posFut, piece, plateau)
+    
+    # 2. Exécuter le mouvement (gère le déplacement spécial de la tour si c'est un roque)
+    executer_mouvement_complet(plateau, posInit, posFut, droits_roque)
+    
+    # 3. Gestion de la promotion du pion
     yFut = posFut[1]
     if piece == "P" and yFut == 7:
-        c = input("Placer un pion de votre choix entre D T F C : ")
-        plateau[yFut][posFut[0]] = c
+        c = input("Promotion ! Choisissez D, T, F ou C : ")
+        plateau[yFut][posFut[0]] = c.upper()
     elif piece == "p" and yFut == 0:
-        c = input("Placer un pion de votre choix entre d t f c : ")
-        plateau[yFut][posFut[0]] = c
+        c = input("Promotion ! Choisissez d, t, f ou c : ")
+        plateau[yFut][posFut[0]] = c.lower()
+        
     return True
 
 
