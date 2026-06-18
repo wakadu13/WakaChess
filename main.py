@@ -3,7 +3,6 @@ from plateau import *
 from utilitaire import *
 from geo import *
 from ia import *
-import time
 
 
 
@@ -32,8 +31,18 @@ def changementPosition(posInit, posFut, piece, plateau, est_ia=False):
 
     # Exécution du mouvement
     executer_mouvement_complet(plateau, posInit, posFut, droits_roque)
-    
-    # ... (reste du code pour promotion) ...
+
+    # Promotion du pion sur la dernière rangée
+    if piece.upper() == 'P' and posFut[1] in (0, 7):
+        if est_ia:
+            choix = 'D'
+        else:
+            choix = input("Promotion ! Choisissez la pièce (D=Dame, T=Tour, C=Cavalier, F=Fou) : ").strip().upper()
+            if choix not in ('D', 'T', 'C', 'F'):
+                choix = 'D'
+        nouvelle_piece = choix if piece.isupper() else choix.lower()
+        plateau[posFut[1]][posFut[0]] = nouvelle_piece
+
     return True
 historique_positions = []
 
@@ -57,8 +66,8 @@ def main():
     print("=== Bienvenue dans WakaChess ===")
     campChoisi = input("Choisissez votre camp (M pour Majuscules/Blancs, m pour Minuscules/Noirs) : ")
     
-    # Si le joueur choisit m, l'IA joue les Blancs (Majuscules)
-    IA_camp_est_maj = (campChoisi.lower() == 'm')
+    # Si le joueur choisit m (minuscule), il joue les Noirs : l'IA joue alors les Blancs (Majuscules)
+    IA_camp_est_maj = (campChoisi == 'm')
     
     if IA_camp_est_maj:
         print("L'IA joue les Majuscules et commence la partie.")
@@ -74,11 +83,6 @@ def main():
         print("Niveau par défaut (3) sélectionné.")
 
     while play:
-        # Dans ta boucle while play :
-        debut_reflexion = time.time()
-        # On réduit la profondeur si l'IA a mis trop de temps au tour précédent
-        temps_ia = 10.0 # limite de 10 secondes par coup
-        coup, score = trouver_meilleur_coup(plateau, Nombre_Profondeur, IA_camp_est_maj, debut_reflexion, temps_ia)
         print("\n" + "="*20)
         print(f"TOUR NUMERO : {nbTour}")
         affichagePlateau(plateau)

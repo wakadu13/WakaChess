@@ -67,11 +67,11 @@ def faire_coup_rapide(plateau, posInit, posFut):
     if piece_deplacee.upper() == 'R' and abs(x2 - x1) == 2:
         # C'est un roque : on déplace la tour manuellement
         ligne = y1
-        if x2 == 6: # Petit roque (vers la droite)
-            plateau[ligne][5] = plateau[ligne][7]
+        if x2 == 5: # Roque vers la droite (tour en x=7)
+            plateau[ligne][4] = plateau[ligne][7]
             plateau[ligne][7] = '.'
-        elif x2 == 2: # Grand roque (vers la gauche)
-            plateau[ligne][3] = plateau[ligne][0]
+        elif x2 == 1: # Roque vers la gauche (tour en x=0)
+            plateau[ligne][2] = plateau[ligne][0]
             plateau[ligne][0] = '.'
 
     # Déplacement normal du Roi (ou de n'importe quelle pièce)
@@ -88,12 +88,12 @@ def defaire_coup_rapide(plateau, posInit, posFut, piece_capturee):
     # --- ANNULATION DU ROQUE ---
     if piece_deplacee.upper() == 'R' and abs(x2 - x1) == 2:
         ligne = y1
-        if x2 == 6: # Annuler petit roque
-            plateau[ligne][7] = plateau[ligne][5]
-            plateau[ligne][5] = '.'
-        elif x2 == 2: # Annuler grand roque
-            plateau[ligne][0] = plateau[ligne][3]
-            plateau[ligne][3] = '.'
+        if x2 == 5: # Annuler roque vers la droite
+            plateau[ligne][7] = plateau[ligne][4]
+            plateau[ligne][4] = '.'
+        elif x2 == 1: # Annuler roque vers la gauche
+            plateau[ligne][0] = plateau[ligne][2]
+            plateau[ligne][2] = '.'
 
     plateau[y1][x1] = piece_deplacee
     plateau[y2][x2] = piece_capturee
@@ -105,25 +105,26 @@ def executer_mouvement_complet(plateau, posInit, posFut, droits_roque):
 
     # --- LOGIQUE SPÉCIFIQUE AU ROQUE ---
     if piece.upper() == 'R' and abs(x_f - x_i) == 2:
-        # Petit Roque
-        if x_f == 6:
-            plateau[y_f][5] = plateau[y_f][7] # La tour bouge en f1/f8
+        # Roque vers la droite (tour en x=7)
+        if x_f == 5:
+            plateau[y_f][4] = plateau[y_f][7]
             plateau[y_f][7] = "."
-        # Grand Roque
-        elif x_f == 2:
-            plateau[y_f][3] = plateau[y_f][0] # La tour bouge en d1/d8
+        # Roque vers la gauche (tour en x=0)
+        elif x_f == 1:
+            plateau[y_f][2] = plateau[y_f][0]
             plateau[y_f][0] = "."
 
     # --- MISE À JOUR DES DROITS AU ROQUE ---
     # Si le roi bouge
     if piece == 'R': droits_roque['R'] = False
     if piece == 'r': droits_roque['r'] = False
-    
-    # Si une tour bouge ou est capturée
-    if (x_i == 0 and y_i == 0) or (x_f == 0 and y_f == 0): droits_roque['T_gauche'] = False
-    if (x_i == 7 and y_i == 0) or (x_f == 7 and y_f == 0): droits_roque['T_droite'] = False
-    if (x_i == 0 and y_i == 7) or (x_f == 0 and y_f == 7): droits_roque['t_gauche'] = False
-    if (x_i == 7 and y_i == 7) or (x_f == 7 and y_f == 7): droits_roque['t_droite'] = False
+
+    # Si une tour bouge (la pièce déplacée doit être une tour) ou est capturée sur sa case de départ
+    est_tour = piece.upper() == 'T'
+    if (est_tour and x_i == 0 and y_i == 0) or (x_f == 0 and y_f == 0): droits_roque['T_gauche'] = False
+    if (est_tour and x_i == 7 and y_i == 0) or (x_f == 7 and y_f == 0): droits_roque['T_droite'] = False
+    if (est_tour and x_i == 0 and y_i == 7) or (x_f == 0 and y_f == 7): droits_roque['t_gauche'] = False
+    if (est_tour and x_i == 7 and y_i == 7) or (x_f == 7 and y_f == 7): droits_roque['t_droite'] = False
 
     # Enfin, on déplace le roi normalement
     plateau[y_f][x_f] = piece
