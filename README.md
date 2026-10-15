@@ -30,6 +30,12 @@ Le projet était à l'origine écrit en Python ; il a été entièrement réécr
 
 ## 🛠️ Compilation et lancement
 
+### Windows (sans rien installer)
+Télécharge [bin/WakaChess.exe](bin/WakaChess.exe) et double-clique dessus : c'est un exécutable autonome (64 bits), aucune DLL ni installation n'est nécessaire. Il peut aussi se lancer depuis un terminal : `WakaChess.exe --bench 5`.
+
+Pour le régénérer depuis Linux : `make windows` (nécessite MinGW-w64, paquet `g++-mingw-w64-x86-64`).
+
+### Compiler soi-même
 **Prérequis** : un compilateur C++17 (g++ ou clang++). Aucune dépendance externe.
 
 ```bash

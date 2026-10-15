@@ -4,6 +4,7 @@ cmake-build-*/
 wakachess
 *.o
 *.exe
+!bin/WakaChess.exe
 
 # Éditeurs
 .vscode/
