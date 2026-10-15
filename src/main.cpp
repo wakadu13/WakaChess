@@ -11,6 +11,13 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 namespace {
 
 using Horloge = std::chrono::steady_clock;
@@ -185,6 +192,10 @@ int jouerPartie() {
     }
 
     std::cout << "Merci d'avoir joué à WakaChess !\n";
+#ifdef _WIN32
+    // Lancé par double-clic, la console se fermerait aussitôt
+    lireLigne("Appuyez sur Entrée pour quitter...", ligne);
+#endif
     return 0;
 }
 
@@ -192,6 +203,10 @@ int jouerPartie() {
 
 int main(int argc, char** argv) {
     std::ios::sync_with_stdio(false);
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8); // pour afficher correctement les accents
+    SetConsoleCP(CP_UTF8);
+#endif
     if (argc >= 3 && std::string(argv[1]) == "--perft")
         return lancerPerft(std::atoi(argv[2]), argc >= 4 ? argv[3] : "");
     if (argc >= 3 && std::string(argv[1]) == "--bench")
