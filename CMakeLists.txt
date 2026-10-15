@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.16)
+project(WakaChess LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+option(WAKACHESS_NATIVE "Optimiser pour le processeur de la machine (-march=native)" ON)
+
+add_executable(wakachess src/main.cpp src/board.cpp src/search.cpp)
+target_compile_options(wakachess PRIVATE -Wall -Wextra)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(wakachess PRIVATE -O3)
+    if(WAKACHESS_NATIVE)
+        target_compile_options(wakachess PRIVATE -march=native)
+    endif()
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_ok OUTPUT ipo_msg)
+    if(ipo_ok)
+        set_property(TARGET wakachess PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
+endif()
