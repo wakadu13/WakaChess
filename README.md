@@ -21,6 +21,11 @@ Le projet était à l'origine écrit en Python ; il a été entièrement réécr
 - **Tri des coups** : captures et promotions explorées en priorité.
 - **Détection des mats** dans la recherche (le mat le plus rapide est préféré) et du pat.
 
+### 🔌 Protocole UCI
+WakaChess parle le protocole **UCI** : on peut le charger dans une interface graphique (Arena, Cute Chess, BanksiaGUI…) ou le faire jouer contre d'autres moteurs. Il suffit d'indiquer `wakachess` (ou `WakaChess.exe`) comme moteur UCI : il passe automatiquement en mode UCI quand l'interface envoie la commande `uci`.
+
+En mode UCI, l'IA gère sa pendule : elle approfondit sa recherche petit à petit (profondeur 1, 2, 3…) et s'arrête quand le temps alloué au coup est écoulé.
+
 ### ⚖️ Arbitrage
 - Échec, échec et mat, pat.
 - Nulle par triple répétition (hachage Zobrist des positions).
@@ -62,6 +67,7 @@ make
 | Commande | Rôle |
 |---|---|
 | `./wakachess` | Lance une partie contre l'IA. |
+| `./wakachess --uci` | Mode UCI, pour une interface graphique (Arena, Cute Chess, BanksiaGUI…) ou des matchs entre moteurs. |
 | `./wakachess --perft N [FEN]` | Compte les positions jusqu'à la profondeur N (validation du générateur de coups). |
 | `./wakachess --bench P` | Mesure la réflexion de l'IA à la profondeur P depuis la position initiale. |
 
@@ -74,6 +80,8 @@ make
 | [src/board.hpp](src/board.hpp) / [src/board.cpp](src/board.cpp) | Plateau, état de la partie (trait, droits au roque, case en passant, compteur 50 coups), génération des coups, cases attaquées, jouer/annuler un coup, perft. |
 | [src/search.hpp](src/search.hpp) / [src/search.cpp](src/search.cpp) | Évaluation (matériel + PST), tri des coups, Negamax alpha-bêta, quiescence, `trouverMeilleurCoup`. |
 | [src/main.cpp](src/main.cpp) | Boucle de jeu, saisie, promotion, fin de partie et nulles. |
+| [src/uci.hpp](src/uci.hpp) / [src/uci.cpp](src/uci.cpp) | Protocole UCI : position, go (pendule, profondeur, temps fixe), stop. |
+| [outils/](outils) | Scripts de mesure de l'Elo (matchs avec fastchess contre Stockfish bridé). |
 
 ### Représentation du plateau
 - Le plateau est un tableau de 64 cases `plateau[y*8 + x]`, `y = 0` étant la rangée de départ des Blancs (rangée 1) et `x = 0` la colonne a. Disposition standard : Roi en e1 (`x=4`), Dame en d1 (`x=3`).
@@ -96,6 +104,23 @@ Le générateur de coups donne les valeurs perft de référence, par exemple :
 
 ---
 
+## 📈 Niveau
+
+Mesuré par 160 parties (cadence 10 s + 0,1 s par coup) contre Stockfish 16 bridé à 1320, 1600, 1900 et 2200 Elo (mode `UCI_Elo`, calibré sur la liste CCRL des moteurs) :
+
+| Adversaire | Score |
+|---|---|
+| Stockfish 1320 | 36 / 40 (90 %) |
+| Stockfish 1600 | 20,5 / 40 (51 %) |
+| Stockfish 1900 | 18 / 40 (45 %) |
+| Stockfish 2200 | 8,5 / 40 (21 %) |
+
+**Elo estimé : environ 1780** (intervalle de confiance à 95 % : 1700 – 1850), sur l'échelle des moteurs, pas sur celle des joueurs humains FIDE.
+
+Pour refaire la mesure : `outils/mesurer_elo.sh ./wakachess 8moves_v3.pgn` (nécessite [fastchess](https://github.com/Disservin/fastchess), Stockfish et un [livre d'ouvertures](https://github.com/official-stockfish/books)).
+
+---
+
 ## 🐞 Corrections par rapport à la version Python
 - **Prise en passant** : la case en passant était une variable globale copiée par `from plateau import *`, jamais mise à jour dans `geo.py` ; la prise en passant n'était donc jamais proposée.
 - **Mats invisibles pour l'IA** : quand il n'y avait plus de coup légal, la recherche renvoyait l'évaluation matérielle au lieu d'un score de mat ou de nulle.
@@ -105,8 +130,7 @@ Le générateur de coups donne les valeurs perft de référence, par exemple :
 ---
 
 ## 🗺️ Pistes d'amélioration
-- **Recherche à temps limité** (*iterative deepening*).
+- **Recherche plus sélective** : élagage du coup nul, réductions des coups tardifs (LMR), recherche à fenêtre nulle (PVS), détection des répétitions pendant la recherche.
 - **Table de transposition** (le hachage Zobrist existe déjà).
 - **Bitboards** pour une génération de coups encore plus rapide.
-- **Protocole UCI** pour brancher le moteur sur une interface graphique.
 - **Sauvegarde / chargement de partie** (PGN) et annulation du dernier coup.
