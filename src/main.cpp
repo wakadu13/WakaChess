@@ -1,6 +1,7 @@
 // main.cpp - Point d'entrée et boucle de jeu de WakaChess (ex main.py + utilitaire.py)
 #include "board.hpp"
 #include "search.hpp"
+#include "uci.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -105,6 +106,7 @@ int jouerPartie() {
     std::cout << "=== Bienvenue dans WakaChess ===\n";
     if (!lireLigne("Choisissez votre camp (M pour Majuscules/Blancs, m pour Minuscules/Noirs) : ", ligne))
         return 0;
+    if (ligne == "uci") return boucleUCI(true); // lancé par une interface graphique
     // Si le joueur choisit m (minuscule), il joue les Noirs : l'IA joue alors les Blancs
     const int campIA = (ligne == "m") ? BLANC : NOIR;
     std::cout << (campIA == BLANC ? "L'IA joue les Majuscules et commence la partie.\n"
@@ -211,8 +213,10 @@ int main(int argc, char** argv) {
         return lancerPerft(std::atoi(argv[2]), argc >= 4 ? argv[3] : "");
     if (argc >= 3 && std::string(argv[1]) == "--bench")
         return lancerBench(std::atoi(argv[2]));
+    if (argc >= 2 && std::string(argv[1]) == "--uci")
+        return boucleUCI(false);
     if (argc >= 2) {
-        std::cout << "Usage : " << argv[0] << " [--perft N [FEN]] [--bench PROFONDEUR]\n";
+        std::cout << "Usage : " << argv[0] << " [--uci] [--perft N [FEN]] [--bench PROFONDEUR]\n";
         return 1;
     }
     return jouerPartie();

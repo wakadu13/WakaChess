@@ -1,6 +1,8 @@
 // search.cpp - Évaluation, Negamax alpha-bêta et quiescence (ex ia.py)
 #include "search.hpp"
 
+#include <algorithm>
+#include <chrono>
 #include <cstdlib>
 
 namespace {
@@ -53,13 +55,33 @@ void trierCoups(const Position& pos, Coup* coups, int n) {
     }
 }
 
+using Horloge = std::chrono::steady_clock;
+
 struct Recherche {
     Position& pos;
+    const std::atomic<bool>& arretExterne;
+    int64_t tempsDurMs;
+    Horloge::time_point debut = Horloge::now();
     uint64_t noeuds = 0;
+    bool arret = false;
+
+    int64_t ecouleMs() const {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(Horloge::now() - debut).count();
+    }
+
+    // Vérifie régulièrement (tous les 2048 nœuds) le temps et la demande d'arrêt
+    bool doitArreter() {
+        if (arret) return true;
+        if ((noeuds & 2047) == 0 &&
+            (arretExterne.load(std::memory_order_relaxed) || (tempsDurMs >= 0 && ecouleMs() >= tempsDurMs)))
+            arret = true;
+        return arret;
+    }
 
     // Recherche de repos : on prolonge sur les captures pour éviter l'effet d'horizon
     int quiescence(int alpha, int beta) {
         ++noeuds;
+        if (doitArreter()) return 0;
         const int standPat = evaluerPlateau(pos);
         if (standPat >= beta) return beta;
         if (alpha < standPat) alpha = standPat;
@@ -74,6 +96,7 @@ struct Recherche {
             if (pos.enEchec(camp)) { pos.annuler(coups[i], a); continue; } // coup illégal
             const int score = -quiescence(-beta, -alpha);
             pos.annuler(coups[i], a);
+            if (arret) return 0;
             if (score >= beta) return beta;
             if (score > alpha) alpha = score;
         }
@@ -83,6 +106,7 @@ struct Recherche {
     int negamax(int profondeur, int alpha, int beta, int ply) {
         if (profondeur == 0) return quiescence(alpha, beta);
         ++noeuds;
+        if (doitArreter()) return 0;
 
         Coup coups[MAX_COUPS];
         const int n = pos.genererLegaux(coups);
@@ -96,6 +120,7 @@ struct Recherche {
             pos.jouer(coups[i], a);
             const int score = -negamax(profondeur - 1, -beta, -alpha, ply + 1);
             pos.annuler(coups[i], a);
+            if (arret) return 0;
             if (score > meilleur) meilleur = score;
             if (score > alpha) alpha = score;
             if (alpha >= beta) break;
@@ -129,28 +154,60 @@ int evaluerPlateau(const Position& pos) {
     return pos.trait == BLANC ? score : -score;
 }
 
-ResultatRecherche trouverMeilleurCoup(Position& pos, int profondeur) {
+ResultatRecherche rechercher(Position& pos, const LimitesRecherche& limites,
+                             const std::atomic<bool>& arret, const RappelInfo& info) {
     ResultatRecherche res;
     Coup coups[MAX_COUPS];
     const int n = pos.genererLegaux(coups);
     if (n == 0) return res;
     trierCoups(pos, coups, n);
-
-    Recherche r{pos};
-    int alpha = -INFINI;
-    const int beta = INFINI;
     res.trouve = true;
     res.coup = coups[0];
-    res.score = -INFINI;
 
-    for (int i = 0; i < n; ++i) {
-        Annulation a;
-        pos.jouer(coups[i], a);
-        const int score = -r.negamax(profondeur - 1, -beta, -alpha, 1);
-        pos.annuler(coups[i], a);
-        if (score > res.score) { res.score = score; res.coup = coups[i]; }
-        if (score > alpha) alpha = score;
+    Recherche r{pos, arret, limites.tempsDurMs};
+    const int profondeurMax = std::min(limites.profondeur, PROFONDEUR_MAX);
+
+    for (int profondeur = 1; profondeur <= profondeurMax; ++profondeur) {
+        int alpha = -INFINI;
+        const int beta = INFINI;
+        int meilleurScore = -INFINI;
+        int meilleur = -1;
+
+        for (int i = 0; i < n; ++i) {
+            Annulation a;
+            pos.jouer(coups[i], a);
+            const int score = -r.negamax(profondeur - 1, -beta, -alpha, 1);
+            pos.annuler(coups[i], a);
+            if (r.arret) break;
+            if (score > meilleurScore) { meilleurScore = score; meilleur = i; }
+            if (score > alpha) alpha = score;
+        }
+        // Itération interrompue : on garde son meilleur coup seulement s'il a été entièrement évalué
+        if (meilleur < 0) break;
+
+        // Le meilleur coup est exploré en premier à l'itération suivante
+        const Coup m = coups[meilleur];
+        for (int i = meilleur; i > 0; --i) coups[i] = coups[i - 1];
+        coups[0] = m;
+
+        res.coup = m;
+        res.score = meilleurScore;
+        res.profondeur = profondeur;
+        res.noeuds = r.noeuds;
+        if (r.arret) break;
+        if (info) info(profondeur, meilleurScore, r.noeuds, r.ecouleMs(), m);
+
+        if (limites.tempsDouxMs >= 0 && r.ecouleMs() >= limites.tempsDouxMs) break;
+        if (std::abs(meilleurScore) >= SCORE_MAT - PROFONDEUR_MAX && profondeur >= SCORE_MAT - std::abs(meilleurScore))
+            break; // mat trouvé et prouvé à cette profondeur
     }
     res.noeuds = r.noeuds;
     return res;
+}
+
+ResultatRecherche trouverMeilleurCoup(Position& pos, int profondeur) {
+    const std::atomic<bool> jamais{false};
+    LimitesRecherche limites;
+    limites.profondeur = profondeur;
+    return rechercher(pos, limites, jamais);
 }
