@@ -4,6 +4,7 @@
 #include "uci.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
@@ -100,7 +101,7 @@ int jouerPartie() {
     pos.positionInitiale();
     std::vector<uint64_t> historique{pos.hash()};
     int nbTour = 0;
-    int profondeur = 3;
+    int niveau = 3;
     std::string ligne;
 
     std::cout << "=== Bienvenue dans WakaChess ===\n";
@@ -112,12 +113,16 @@ int jouerPartie() {
     std::cout << (campIA == BLANC ? "L'IA joue les Majuscules et commence la partie.\n"
                                   : "Vous jouez les Majuscules et commencez la partie.\n");
 
+    std::cout << "Niveaux :";
+    for (int n = 1; n <= NIVEAU_MAX; ++n) std::cout << "  " << n << " = " << nomNiveau(n);
+    std::cout << '\n';
     if (!lireLigne("Choisissez la difficulté (1-5) : ", ligne)) return 0;
     try {
-        profondeur = std::clamp(std::stoi(ligne) + 1, 1, 6);
+        niveau = std::clamp(std::stoi(ligne), 1, NIVEAU_MAX);
     } catch (...) {
         std::cout << "Niveau par défaut (3) sélectionné.\n";
     }
+    const std::atomic<bool> jamais{false};
 
     while (true) {
         std::cout << "\n" << std::string(20, '=') << "\nTOUR NUMERO : " << nbTour << '\n';
@@ -131,7 +136,7 @@ int jouerPartie() {
         if (pos.trait == campIA) {
             std::cout << "Le bot réfléchit...\n";
             const auto debut = Horloge::now();
-            const ResultatRecherche r = trouverMeilleurCoup(pos, profondeur);
+            const ResultatRecherche r = rechercher(pos, limitesPourNiveau(niveau), jamais);
             if (!r.trouve) { std::cout << "Le bot est bloqué. Fin de la partie.\n"; break; }
             choisi = r.coup;
             std::cout << "Le bot a joué : " << decrireCoup(choisi) << " (Score: " << r.score << ", "

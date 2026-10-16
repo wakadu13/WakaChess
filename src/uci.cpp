@@ -42,7 +42,7 @@ bool appliquerCoupUCI(Position& pos, const std::string& texte) {
 }
 
 std::string scoreVersUCI(int score) {
-    if (std::abs(score) >= SCORE_MAT - PROFONDEUR_MAX) {
+    if (std::abs(score) >= SEUIL_MAT) {
         const int plis = SCORE_MAT - std::abs(score);
         const int coups = (plis + 1) / 2;
         return "mate " + std::to_string(score > 0 ? coups : -coups);
@@ -88,6 +88,7 @@ public:
             else if (mot == "movestogo") in >> movestogo;
             else if (mot == "movetime") in >> movetime;
             else if (mot == "depth") in >> limites.profondeur;
+            else if (mot == "nodes") in >> limites.noeuds;
             else if (mot == "infinite") infini = true;
         }
 
@@ -107,11 +108,11 @@ public:
         Position copie = pos_;
         fil_ = std::thread([this, copie, limites, infini]() mutable {
             const ResultatRecherche r = rechercher(copie, limites, arret_,
-                [](int profondeur, int score, uint64_t noeuds, int64_t ms, const Coup& m) {
+                [](int profondeur, int score, uint64_t noeuds, int64_t ms, const Coup* pv, int longueur) {
                     std::ostringstream o;
                     o << "info depth " << profondeur << " score " << scoreVersUCI(score) << " nodes " << noeuds
-                      << " time " << ms << " nps " << (ms > 0 ? noeuds * 1000 / ms : noeuds) << " pv "
-                      << coupVersUCI(m);
+                      << " time " << ms << " nps " << (ms > 0 ? noeuds * 1000 / ms : noeuds) << " pv";
+                    for (int i = 0; i < longueur; ++i) o << ' ' << coupVersUCI(pv[i]);
                     envoyer(o.str());
                 });
             // En mode "infinite", le meilleur coup n'est envoyé qu'après "stop"
@@ -138,6 +139,7 @@ int boucleUCI(bool dejaRecuUci) {
     auto identifier = [] {
         envoyer("id name WakaChess");
         envoyer("id author wakadu13");
+        envoyer("option name Hash type spin default 16 min 1 max 1024");
         envoyer("uciok");
     };
     if (dejaRecuUci) identifier();
@@ -149,7 +151,17 @@ int boucleUCI(bool dejaRecuUci) {
         in >> commande;
         if (commande == "uci") identifier();
         else if (commande == "isready") envoyer("readyok");
-        else if (commande == "ucinewgame") moteur.arreter();
+        else if (commande == "ucinewgame") { moteur.arreter(); viderTT(); }
+        else if (commande == "setoption") {
+            std::string mot, nom, valeur;
+            while (in >> mot && mot != "value") if (mot != "name") nom += (nom.empty() ? "" : " ") + mot;
+            in >> valeur;
+            if (nom == "Hash") {
+                moteur.arreter();
+                try { redimensionnerTT(static_cast<std::size_t>(std::clamp(std::stoi(valeur), 1, 1024))); }
+                catch (...) {}
+            }
+        }
         else if (commande == "position") moteur.position(in);
         else if (commande == "go") moteur.go(in);
         else if (commande == "stop") moteur.arreter();

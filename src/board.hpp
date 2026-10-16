@@ -15,6 +15,7 @@ enum : uint8_t { ROQUE_BR = 1, ROQUE_BD = 2, ROQUE_NR = 4, ROQUE_ND = 8 }; // R 
 enum : uint8_t { F_CAPTURE = 1, F_DOUBLE = 2, F_EN_PASSANT = 4, F_ROQUE = 8 };
 
 constexpr int MAX_COUPS = 256;
+constexpr int MAX_HISTORIQUE = 4096;
 
 // Case = y*8 + x, avec y = 0 la rangée de départ des Blancs (rangée 1) et x = 0 la colonne a
 inline int caseDe(int x, int y) { return y * 8 + x; }
@@ -37,6 +38,7 @@ struct Annulation {
     uint8_t roque;
     int8_t enPassant;
     int compteur50;
+    uint64_t cle;
 };
 
 struct Position {
@@ -46,6 +48,11 @@ struct Position {
     int8_t enPassant = -1;  // case de prise en passant, -1 si aucune
     int compteur50 = 0;     // demi-coups depuis la dernière capture ou le dernier coup de pion
     int caseRoi[2] = {4, 60};
+    uint64_t cle = 0;       // hachage Zobrist, mis à jour à chaque coup
+
+    // Clés des positions précédentes, pour détecter les répétitions
+    uint64_t historique[MAX_HISTORIQUE];
+    int nbHistorique = 0;
 
     void positionInitiale();
     bool chargerFEN(const std::string& fen);
@@ -60,8 +67,13 @@ struct Position {
 
     void jouer(const Coup& m, Annulation& a);
     void annuler(const Coup& m, const Annulation& a);
+    void jouerNul(Annulation& a);   // passe le trait (élagage du coup nul)
+    void annulerNul(const Annulation& a);
 
-    uint64_t hash() const; // Pour la triple répétition
+    uint64_t hash() const { return cle; }
+    uint64_t calculerCle() const;
+    int repetitions() const;        // nombre de fois où la position actuelle est déjà apparue
+    bool aDesPiecesLourdes(int camp) const; // autre chose que des pions et le roi
     void afficher() const;
 };
 

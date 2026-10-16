@@ -5,6 +5,7 @@ wakachess
 *.o
 *.exe
 !bin/WakaChess.exe
+!bin/WakaChess-console.exe
 
 # Éditeurs
 .vscode/
