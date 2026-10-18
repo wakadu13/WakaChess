@@ -1,0 +1,172 @@
+:root {
+  --fond: #302e2b;
+  --texte: #ececec;
+  --doux: #b8b5af;
+  --claire: #f0d9b5;
+  --sombre: #b58863;
+  --dernier: rgba(205, 210, 60, 0.55);
+  --selection: rgba(246, 246, 105, 0.75);
+  --echec: #eb6150;
+  --marque: rgba(40, 40, 40, 0.38);
+  --bouton: #4a4743;
+  --bouton-actif: #5d5a55;
+  --accent: #ffd25a;
+  --taille: 360px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+  min-height: 100%;
+  justify-content: center;
+}
+
+header {
+  width: var(--taille);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+h1 { font-size: 1.25rem; margin: 0; letter-spacing: 0.02em; }
+
+.niveau { color: var(--doux); font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
+
+select, button {
+  font: inherit;
+  color: var(--texte);
+  background: var(--bouton);
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+button:active, select:active { background: var(--bouton-actif); }
+/* Menu déroulant au même style partout (Safari/WebKit imposent sinon leur style natif, illisible ici) */
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 16px; /* en dessous de 16 px, Safari sur iPhone zoome la page au toucher */
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ececec' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+select option { background: #3b3936; color: var(--texte); }
+button:disabled { opacity: 0.45; cursor: default; }
+
+#plateau {
+  width: var(--taille);
+  height: var(--taille);
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  border-radius: 4px;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.case { position: relative; display: flex; align-items: center; justify-content: center; }
+.case.claire { background: var(--claire); }
+.case.sombre { background: var(--sombre); }
+.case.dernier::before, .case.selection::before {
+  content: ""; position: absolute; inset: 0;
+}
+.case.dernier::before { background: var(--dernier); }
+.case.selection::before { background: var(--selection); }
+.case.echec { background: radial-gradient(circle, var(--echec) 30%, rgba(235, 97, 80, 0.6) 60%, transparent 85%), var(--sombre); }
+.case.claire.echec { background: radial-gradient(circle, var(--echec) 30%, rgba(235, 97, 80, 0.6) 60%, transparent 85%), var(--claire); }
+
+.coord {
+  position: absolute;
+  font-size: calc(var(--taille) / 40);
+  font-weight: 700;
+  pointer-events: none;
+}
+.coord.lettre { right: 3px; bottom: 1px; }
+.coord.chiffre { left: 3px; top: 1px; }
+.case.claire .coord { color: var(--sombre); }
+.case.sombre .coord { color: var(--claire); }
+
+.piece, #fantome {
+  position: relative;
+  font-family: "Noto Sans Symbols 2", "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", sans-serif;
+  font-size: calc(var(--taille) / 8 * 0.8);
+  line-height: 1;
+  pointer-events: none;
+}
+.blanc { color: #fff; -webkit-text-stroke: 0.035em #1d1d1d; paint-order: stroke fill; }
+.noir { color: #151515; -webkit-text-stroke: 0.02em #000; }
+.piece.cachee { opacity: 0.25; }
+
+#fantome {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  font-size: calc(var(--taille) / 8 * 0.95);
+}
+
+.cible::after {
+  content: ""; position: absolute;
+  width: 30%; height: 30%;
+  border-radius: 50%;
+  background: var(--marque);
+}
+.cible.prise::after {
+  width: 92%; height: 92%;
+  background: transparent;
+  border: calc(var(--taille) / 100) solid var(--marque);
+}
+
+#statut { margin: 0; min-height: 1.4em; text-align: center; width: var(--taille); }
+#statut.fin { color: var(--accent); font-weight: 600; }
+
+nav { width: var(--taille); display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; }
+
+.voile {
+  position: fixed; inset: 0; z-index: 20;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.voile[hidden] { display: none; }
+.boite {
+  background: #3b3936;
+  border-radius: 12px;
+  padding: 18px;
+  width: min(340px, 100%);
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.boite p { margin: 0 0 14px; font-size: 1.05rem; }
+#fenetre-boutons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+#fenetre-boutons button { flex: 1 1 40%; }
+#fenetre-boutons button.piece-promo {
+  flex: 1 1 20%;
+  font-family: "Noto Sans Symbols 2", "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", sans-serif;
+  font-size: 2.4rem;
+  line-height: 1;
+  padding: 6px 0;
+  background: var(--claire);
+}

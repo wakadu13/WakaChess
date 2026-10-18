@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>WakaChess</title>
+  <meta name="description" content="Jeu d'échecs contre une IA d'environ 2460 Elo, jouable hors ligne.">
+  <meta name="theme-color" content="#302e2b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WakaChess">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icone-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>WakaChess</h1>
+      <label class="niveau">Niveau
+        <select id="niveau" aria-label="Niveau de l'IA"></select>
+      </label>
+    </header>
+
+    <div id="plateau" role="grid" aria-label="Échiquier"></div>
+
+    <p id="statut" aria-live="polite">Chargement du moteur…</p>
+
+    <nav>
+      <button id="btn-nouvelle" type="button">Nouvelle partie</button>
+      <button id="btn-annuler" type="button">↶ Annuler</button>
+      <button id="btn-tourner" type="button">⇅ Tourner</button>
+    </nav>
+  </main>
+
+  <div id="fenetre" class="voile" hidden>
+    <div class="boite" role="dialog" aria-modal="true">
+      <p id="fenetre-texte"></p>
+      <div id="fenetre-boutons"></div>
+    </div>
+  </div>
+
+  <script src="wakachess.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

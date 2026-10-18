@@ -1,0 +1,115 @@
+# Compile WakaChess pour toutes les plateformes.
+# Les fichiers produits se téléchargent dans l'onglet Actions (section « Artifacts » de chaque exécution).
+# Pousser une étiquette vX.Y (ex. v2.0) crée en plus une « Release » GitHub avec tous les fichiers.
+name: Compilation
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compilateur ARM64
+        run: sudo apt-get update && sudo apt-get install -y g++-aarch64-linux-gnu
+      - name: Compilation
+        run: make linux
+      - name: Test du générateur de coups (perft)
+        run: bin/linux-x64/wakachess --perft 5 | tee /dev/stderr | grep -q "4865609"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wakachess-linux
+          path: bin/linux-*/wakachess
+
+  macos-arm:
+    runs-on: macos-14 # Apple Silicon (M1)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compilation
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DWAKACHESS_NATIVE=OFF -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build
+          mkdir -p sortie && cp build/wakachess sortie/wakachess
+      - name: Test du générateur de coups (perft)
+        run: sortie/wakachess --perft 5 | tee /dev/stderr | grep -q "4865609"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wakachess-macos-arm64
+          path: sortie/wakachess
+
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: MinGW-w64
+        run: sudo apt-get update && sudo apt-get install -y g++-mingw-w64-x86-64
+      - name: Compilation
+        run: make windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wakachess-windows
+          path: bin/*.exe
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mymindstorm/setup-emsdk@v14
+      - name: Compilation WebAssembly
+        run: make web
+      - name: Test du moteur web
+        run: |
+          node -e "require('./docs/wakachess.js')().then(M => { M.cwrap('wc_nouvelle', null, [])(); const r = M.cwrap('wc_chercher', 'string', ['number'])(2); console.log('coup :', r); if (!/^[a-h][1-8][a-h][1-8]/.test(r)) process.exit(1); })"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wakachess-web
+          path: docs/
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compilation de l'APK
+        run: gradle -p android assembleRelease
+      - name: Renommage
+        run: cp android/app/build/outputs/apk/release/app-release.apk WakaChess.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wakachess-android
+          path: WakaChess.apk
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, macos-arm, windows, web, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: a
+      - name: Préparation des fichiers
+        run: |
+          mkdir r
+          cp a/wakachess-linux/linux-x64/wakachess r/wakachess-linux-x64
+          cp a/wakachess-linux/linux-arm64/wakachess r/wakachess-linux-arm64
+          cp a/wakachess-macos-arm64/wakachess r/wakachess-macos-arm64
+          cp a/wakachess-windows/WakaChess.exe a/wakachess-windows/WakaChess-console.exe r/
+          cp a/wakachess-android/WakaChess.apk r/
+          (cd a/wakachess-web && zip -r ../../r/wakachess-web.zip .)
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: r/*

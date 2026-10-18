@@ -1,7 +1,7 @@
 # WakaChess
 ♟️ WakaChess - Moteur d'Échecs en C++
 
-**WakaChess** est un jeu d'échecs en console contre une Intelligence Artificielle. Le projet implémente toutes les règles des échecs (déplacements, roque, prise en passant, promotion, échec/mat, pat, nulles) et un moteur de réflexion basé sur l'algorithme Negamax.
+**WakaChess** est un jeu d'échecs contre une Intelligence Artificielle, jouable sur **Android, iOS, Windows, macOS (Apple Silicon) et Linux**, au doigt ou à la souris. Le projet implémente toutes les règles des échecs (déplacements, roque, prise en passant, promotion, échec/mat, pat, nulles) et un moteur de réflexion d'environ **2460 Elo** (échelle des moteurs).
 
 Le projet était à l'origine écrit en Python ; il a été entièrement réécrit en C++ pour la performance. À profondeur égale, l'IA réfléchit environ **2 500 fois plus vite** (profondeur 5 depuis la position initiale : ~60 s en Python, ~0,02 s en C++).
 
@@ -14,17 +14,29 @@ Le projet était à l'origine écrit en Python ; il a été entièrement réécr
 - **La promotion** : Dame automatiquement pour l'IA, choix interactif Dame/Tour/Cavalier/Fou pour le joueur (l'IA envisage toutes les promotions pendant sa recherche).
 - **Saisie** par coordonnées (`4 1 4 3`) ou en notation `e2e4`.
 
+### 🖱️ Interface graphique (Windows, web, Android, iOS)
+Tout se fait au doigt ou à la souris, avec les mêmes fonctions sur toutes les plateformes :
+- **Jouer un coup** : cliquer sur une pièce puis sur sa case d'arrivée, ou la faire glisser. Les cases possibles sont marquées d'un point (d'un anneau pour une prise).
+- **Promotion** : un petit menu propose Dame, Tour, Fou ou Cavalier.
+- **Menu Partie** : nouvelle partie avec les Blancs ou les Noirs, annuler le dernier coup, tourner l'échiquier.
+- **Menu Niveau** : 5 niveaux, de Débutant à Maximum (3 s de réflexion par coup).
+- Le dernier coup est surligné, le roi en échec apparaît en rouge, et la fin de partie (mat, pat, répétition, 50 coups, matériel insuffisant) est annoncée.
+- On peut aussi démarrer d'une position donnée : `WakaChess.exe "<FEN>"` sous Windows, `?fen=<FEN>` dans l'adresse de la version web.
+
 ### 🤖 Intelligence artificielle
-- **Negamax** avec **élagage Alpha-Bêta**.
-- **Quiescence Search** : prolonge la recherche sur les captures pour éviter l'effet d'horizon.
-- **Piece-Square Tables (PST)** pour les pions et les cavaliers, bonus pour le roi roqué.
-- **Tri des coups** : captures et promotions explorées en priorité.
-- **Détection des mats** dans la recherche (le mat le plus rapide est préféré) et du pat.
+- **Negamax alpha-bêta** avec **recherche à fenêtre nulle (PVS)** et **approfondissement itératif** avec fenêtres d'aspiration.
+- **Table de transposition** (hachage Zobrist incrémental) : les positions déjà analysées ne sont pas recalculées.
+- **Élagages** : coup nul (*null move pruning*), élagage statique (*reverse futility pruning*), élagage des coups tardifs (*late move pruning*).
+- **Réductions des coups tardifs (LMR)** et **extension d'échec**.
+- **Tri des coups** : coup de la table de transposition, captures (MVV-LVA), coups « tueurs » (*killer moves*), historique des coups calmes.
+- **Quiescence** : prolonge la recherche sur les captures et promotions, avec élagage delta.
+- **Évaluation PeSTO** : matériel et position de chaque pièce, interpolés entre milieu et fin de partie.
+- **Nulles détectées pendant la recherche** (répétition, règle des 50 coups) : l'IA ne gâche plus une position gagnante en répétant les coups, et cherche la nulle quand elle est perdue.
 
 ### 🔌 Protocole UCI
-WakaChess parle le protocole **UCI** : on peut le charger dans une interface graphique (Arena, Cute Chess, BanksiaGUI…) ou le faire jouer contre d'autres moteurs. Il suffit d'indiquer `wakachess` (ou `WakaChess.exe`) comme moteur UCI : il passe automatiquement en mode UCI quand l'interface envoie la commande `uci`.
+WakaChess parle le protocole **UCI** : on peut le charger dans une interface graphique (Arena, Cute Chess, BanksiaGUI…) ou le faire jouer contre d'autres moteurs. Il suffit d'indiquer `wakachess` (ou `WakaChess-console.exe` sous Windows) comme moteur UCI : il passe automatiquement en mode UCI quand l'interface envoie la commande `uci`.
 
-En mode UCI, l'IA gère sa pendule : elle approfondit sa recherche petit à petit (profondeur 1, 2, 3…) et s'arrête quand le temps alloué au coup est écoulé.
+En mode UCI, l'IA gère sa pendule : elle approfondit sa recherche petit à petit (profondeur 1, 2, 3…) et s'arrête quand le temps alloué au coup est écoulé. Option disponible : `Hash` (taille de la table de transposition en Mo, 16 par défaut).
 
 ### ⚖️ Arbitrage
 - Échec, échec et mat, pat.
@@ -33,12 +45,46 @@ En mode UCI, l'IA gère sa pendule : elle approfondit sa recherche petit à peti
 
 ---
 
-## 🛠️ Compilation et lancement
+## 📲 Installer WakaChess
+
+| Plateforme | Comment jouer |
+|---|---|
+| **Toutes** (Android, iOS, Windows, macOS, Linux) | Ouvrir la **version web** dans le navigateur, puis l'installer comme une application (voir ci-dessous). Elle fonctionne ensuite **hors ligne**. |
+| **Android** | Version web installée, ou fichier **`WakaChess.apk`** (voir « Fichiers compilés »). |
+| **iOS / iPadOS** | Version web dans Safari → bouton **Partager** → **« Sur l'écran d'accueil »**. |
+| **Windows** | [bin/WakaChess.exe](bin/WakaChess.exe) : interface graphique, double-clic et c'est parti. |
+| **macOS (Apple Silicon)** | Version web (Safari → Fichier → **« Ajouter au Dock »**), ou moteur console/UCI `wakachess-macos-arm64`. |
+| **Linux** | Version web, ou moteur console/UCI : [bin/linux-x64/wakachess](bin/linux-x64/wakachess), [bin/linux-arm64/wakachess](bin/linux-arm64/wakachess) (Raspberry Pi…). |
+
+### Version web (toutes plateformes)
+Le moteur C++ est compilé en **WebAssembly** : c'est exactement la même IA que les versions natives, qui tourne dans le navigateur, sans serveur. Les fichiers sont dans [docs/](docs).
+
+**Mise en ligne (une seule fois)** : sur GitHub, *Settings → Pages → Build and deployment* : *Source* = **Deploy from a branch**, *Branch* = **main** et dossier **/docs**. Le jeu est alors disponible à l'adresse `https://wakadu13.github.io/WakaChess/`.
+
+**Installation comme une application** :
+- **Android** (Chrome) : menu ⋮ → **« Installer l'application »** (ou « Ajouter à l'écran d'accueil »).
+- **iPhone / iPad** (Safari) : bouton **Partager** → **« Sur l'écran d'accueil »**.
+- **Windows / Linux** (Chrome, Edge) : icône d'installation dans la barre d'adresse.
+- **Mac** (Safari) : menu **Fichier → « Ajouter au Dock »**.
+
+Pour essayer en local : `python3 -m http.server -d docs 8000`, puis ouvrir `http://localhost:8000`. Pour partir d'une position : `…/index.html?fen=<FEN>`.
+
+### Fichiers compilés (Android, Mac, Linux, Windows)
+Le dépôt compile automatiquement toutes les versions avec **GitHub Actions** ([.github/workflows/compilation.yml](.github/workflows/compilation.yml)) :
+- onglet **Actions** → dernière exécution de « Compilation » → section **Artifacts** : `wakachess-android` (APK), `wakachess-macos-arm64`, `wakachess-linux`, `wakachess-windows`, `wakachess-web` ;
+- en poussant une étiquette (ex. `git tag v2.0 && git push origin v2.0`), une **Release** GitHub est créée avec tous ces fichiers en téléchargement direct.
+
+**Installer l'APK Android** : le télécharger sur le téléphone, l'ouvrir et autoriser l'installation d'applications de cette source. L'application embarque la version web et fonctionne hors ligne.
+
+**Mac** : après téléchargement, `chmod +x wakachess-macos-arm64`, puis au premier lancement clic droit → Ouvrir (le fichier n'est pas signé par Apple).
 
 ### Windows (sans rien installer)
-Télécharge [bin/WakaChess.exe](bin/WakaChess.exe) et double-clique dessus : c'est un exécutable autonome (64 bits), aucune DLL ni installation n'est nécessaire. Il peut aussi se lancer depuis un terminal : `WakaChess.exe --bench 5`.
+Deux exécutables autonomes (64 bits, aucune DLL ni installation nécessaire) :
 
-Pour le régénérer depuis Linux : `make windows` (nécessite MinGW-w64, paquet `g++-mingw-w64-x86-64`).
+| Fichier | Rôle |
+|---|---|
+| [bin/WakaChess.exe](bin/WakaChess.exe) | **Interface graphique** : double-clique dessus et joue à la souris. |
+| [bin/WakaChess-console.exe](bin/WakaChess-console.exe) | Version console, et moteur **UCI** à charger dans Arena, Cute Chess… |
 
 ### Compiler soi-même
 **Prérequis** : un compilateur C++17 (g++ ou clang++). Aucune dépendance externe.
@@ -57,9 +103,14 @@ cmake --build build
 
 Ou avec Make :
 ```bash
-make
+make            # moteur console/UCI pour cette machine
+make linux      # exécutables Linux statiques x64 et ARM64 (bin/linux-*)
+make windows    # exécutables Windows (MinGW-w64)
+make web        # version WebAssembly dans docs/ (Emscripten)
 ./wakachess
 ```
+
+L'application Android se compile avec Gradle 8.9 et le SDK Android : `gradle -p android assembleRelease`.
 
 `-march=native` est activé par défaut ; pour un binaire portable : `cmake -B build -DWAKACHESS_NATIVE=OFF`.
 
@@ -78,9 +129,13 @@ make
 | Fichier | Rôle |
 |---|---|
 | [src/board.hpp](src/board.hpp) / [src/board.cpp](src/board.cpp) | Plateau, état de la partie (trait, droits au roque, case en passant, compteur 50 coups), génération des coups, cases attaquées, jouer/annuler un coup, perft. |
-| [src/search.hpp](src/search.hpp) / [src/search.cpp](src/search.cpp) | Évaluation (matériel + PST), tri des coups, Negamax alpha-bêta, quiescence, `trouverMeilleurCoup`. |
+| [src/search.hpp](src/search.hpp) / [src/search.cpp](src/search.cpp) | Évaluation PeSTO, table de transposition, recherche (PVS, élagages, réductions, quiescence), niveaux de difficulté. |
 | [src/main.cpp](src/main.cpp) | Boucle de jeu, saisie, promotion, fin de partie et nulles. |
-| [src/uci.hpp](src/uci.hpp) / [src/uci.cpp](src/uci.cpp) | Protocole UCI : position, go (pendule, profondeur, temps fixe), stop. |
+| [src/uci.hpp](src/uci.hpp) / [src/uci.cpp](src/uci.cpp) | Protocole UCI : position, go (pendule, profondeur, temps fixe, nœuds), stop, option Hash. |
+| [src/gui_win32.cpp](src/gui_win32.cpp) | Interface graphique Windows (Win32/GDI, sans bibliothèque externe). |
+| [src/web_api.cpp](src/web_api.cpp) | Fonctions exposées à JavaScript pour la version WebAssembly. |
+| [docs/](docs) | Version web / PWA : interface tactile et souris (`app.js`), IA dans un Web Worker (`moteur.js`), fonctionnement hors ligne (`sw.js`). |
+| [android/](android) | Application Android (WebView qui embarque la version web). |
 | [outils/](outils) | Scripts de mesure de l'Elo (matchs avec fastchess contre Stockfish bridé). |
 
 ### Représentation du plateau
@@ -106,16 +161,14 @@ Le générateur de coups donne les valeurs perft de référence, par exemple :
 
 ## 📈 Niveau
 
-Mesuré par 160 parties (cadence 10 s + 0,1 s par coup) contre Stockfish 16 bridé à 1320, 1600, 1900 et 2200 Elo (mode `UCI_Elo`, calibré sur la liste CCRL des moteurs) :
+Mesuré à la cadence 10 s + 0,1 s par coup contre Stockfish 16 bridé (mode `UCI_Elo`, calibré sur la liste CCRL des moteurs), 40 parties par niveau, chaque ouverture jouée avec les deux couleurs :
 
-| Adversaire | Score |
-|---|---|
-| Stockfish 1320 | 36 / 40 (90 %) |
-| Stockfish 1600 | 20,5 / 40 (51 %) |
-| Stockfish 1900 | 18 / 40 (45 %) |
-| Stockfish 2200 | 8,5 / 40 (21 %) |
+| Version | Adversaires et scores | Elo estimé |
+|---|---|---|
+| Traduction du Python (étape 1) | SF1320 90 % · SF1600 51 % · SF1900 45 % · SF2200 21 % | **~1780** (1700 – 1850) |
+| Recherche moderne + PeSTO (étape 2) | SF2000 85 % · SF2300 62 % · SF2600 41 % · SF2900 14 % | **~2460** (2390 – 2530) |
 
-**Elo estimé : environ 1780** (intervalle de confiance à 95 % : 1700 – 1850), sur l'échelle des moteurs, pas sur celle des joueurs humains FIDE.
+Ces Elo sont sur l'échelle des moteurs, pas sur celle des joueurs humains FIDE. Les intervalles sont à 95 %.
 
 Pour refaire la mesure : `outils/mesurer_elo.sh ./wakachess 8moves_v3.pgn` (nécessite [fastchess](https://github.com/Disservin/fastchess), Stockfish et un [livre d'ouvertures](https://github.com/official-stockfish/books)).
 
@@ -130,7 +183,7 @@ Pour refaire la mesure : `outils/mesurer_elo.sh ./wakachess 8moves_v3.pgn` (néc
 ---
 
 ## 🗺️ Pistes d'amélioration
-- **Recherche plus sélective** : élagage du coup nul, réductions des coups tardifs (LMR), recherche à fenêtre nulle (PVS), détection des répétitions pendant la recherche.
-- **Table de transposition** (le hachage Zobrist existe déjà).
-- **Bitboards** pour une génération de coups encore plus rapide.
-- **Sauvegarde / chargement de partie** (PGN) et annulation du dernier coup.
+- **Réseau de neurones NNUE** entraîné sur des parties du moteur contre lui-même (étape 3, objectif 3000).
+- **Bitboards** pour une génération de coups plus rapide.
+- **SEE** (évaluation statique des échanges) pour mieux trier et élaguer les captures.
+- **Sauvegarde / chargement de partie** (PGN).

@@ -1,6 +1,7 @@
 // board.cpp - Plateau, génération des coups, exécution / annulation (ex plateau.py + geo.py)
 #include "board.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -82,6 +83,31 @@ char lettrePiece(int8_t p) {
     return p < 0 ? static_cast<char>(l - 'A' + 'a') : l;
 }
 
+std::string coupVersUCI(const Coup& m) {
+    std::string s = coupVersTexte(m);
+    if (m.promo) s.back() = "..nbrq"[m.promo];
+    return s;
+}
+
+bool materielInsuffisant(const Position& pos) {
+    int mineures = 0;
+    for (int c = 0; c < 64; ++c) {
+        const int t = std::abs(pos.plateau[c]);
+        if (t == PION || t == TOUR || t == DAME) return false;
+        if (t == CAVALIER || t == FOU) ++mineures;
+    }
+    return mineures <= 1;
+}
+
+EtatPartie etatPartie(Position& pos) {
+    Coup liste[MAX_COUPS];
+    if (pos.genererLegaux(liste) == 0) return pos.enEchec(pos.trait) ? MAT : PAT;
+    if (pos.repetitions() >= 2) return NULLE_REPETITION;
+    if (pos.compteur50 >= 100) return NULLE_50_COUPS;
+    if (materielInsuffisant(pos)) return NULLE_MATERIEL;
+    return EN_COURS;
+}
+
 std::string coupVersTexte(const Coup& m) {
     std::string s;
     s += static_cast<char>('a' + colonne(m.de)); s += static_cast<char>('1' + rangee(m.de));
@@ -127,6 +153,8 @@ bool Position::chargerFEN(const std::string& fen) {
     }
     enPassant = (ep.size() == 2) ? static_cast<int8_t>(caseDe(ep[0] - 'a', ep[1] - '1')) : -1;
     compteur50 = c50;
+    cle = calculerCle();
+    nbHistorique = 0;
     return true;
 }
 
@@ -173,6 +201,8 @@ int Position::genererPseudo(Coup* liste, bool capturesSeules) const {
             const int ny = y + s;
             const bool promotion = (ny == 7 || ny == 0);
             // Avance simple et double
+            if (capturesSeules && promotion && plateau[caseDe(x, ny)] == VIDE)
+                ajouter(liste, n, c, caseDe(x, ny), 0, DAME); // la promotion en dame est gardée
             if (!capturesSeules && plateau[caseDe(x, ny)] == VIDE) {
                 ajouterPion(liste, n, c, caseDe(x, ny), 0, promotion);
                 const int depart = (trait == BLANC) ? 1 : 6;
@@ -257,29 +287,78 @@ void Position::jouer(const Coup& m, Annulation& a) {
     const int8_t piece = plateau[m.de];
     const int s = signe(trait);
 
-    a.roque = roque; a.enPassant = enPassant; a.compteur50 = compteur50;
+    a.roque = roque; a.enPassant = enPassant; a.compteur50 = compteur50; a.cle = cle;
     a.capturee = plateau[m.vers];
+    if (nbHistorique < MAX_HISTORIQUE) historique[nbHistorique] = cle;
+    ++nbHistorique;
 
+    uint64_t k = cle;
     if (m.flags & F_EN_PASSANT) {
         const int casePrise = m.vers - 8 * s; // le pion adverse est juste derrière la case d'arrivée
         a.capturee = plateau[casePrise];
         plateau[casePrise] = VIDE;
+        k ^= T.zobrist[a.capturee + 6][casePrise];
+    } else if (a.capturee != VIDE) {
+        k ^= T.zobrist[a.capturee + 6][m.vers];
     }
 
-    plateau[m.vers] = m.promo ? static_cast<int8_t>(s * m.promo) : piece;
+    const int8_t arrivee = m.promo ? static_cast<int8_t>(s * m.promo) : piece;
+    plateau[m.vers] = arrivee;
     plateau[m.de] = VIDE;
+    k ^= T.zobrist[piece + 6][m.de] ^ T.zobrist[arrivee + 6][m.vers];
 
     if (m.flags & F_ROQUE) {
         const int base = m.vers & 56;
-        if (colonne(m.vers) == 6) { plateau[base + 5] = plateau[base + 7]; plateau[base + 7] = VIDE; }
-        else                      { plateau[base + 3] = plateau[base + 0]; plateau[base + 0] = VIDE; }
+        const int tDe = colonne(m.vers) == 6 ? base + 7 : base + 0;
+        const int tVers = colonne(m.vers) == 6 ? base + 5 : base + 3;
+        plateau[tVers] = plateau[tDe]; plateau[tDe] = VIDE;
+        k ^= T.zobrist[s * TOUR + 6][tDe] ^ T.zobrist[s * TOUR + 6][tVers];
     }
     if (piece == s * ROI) caseRoi[trait] = m.vers;
 
     compteur50 = (std::abs(piece) == PION || a.capturee != VIDE) ? 0 : compteur50 + 1;
+    k ^= T.zRoque[roque];
     roque &= T.masqueRoque[m.de] & T.masqueRoque[m.vers];
+    k ^= T.zRoque[roque];
+    if (enPassant >= 0) k ^= T.zEnPassant[colonne(enPassant)];
     enPassant = (m.flags & F_DOUBLE) ? static_cast<int8_t>((m.de + m.vers) / 2) : -1;
+    if (enPassant >= 0) k ^= T.zEnPassant[colonne(enPassant)];
     trait ^= 1;
+    cle = k ^ T.zTrait;
+}
+
+void Position::jouerNul(Annulation& a) {
+    a.roque = roque; a.enPassant = enPassant; a.compteur50 = compteur50; a.cle = cle; a.capturee = VIDE;
+    if (nbHistorique < MAX_HISTORIQUE) historique[nbHistorique] = cle;
+    ++nbHistorique;
+    if (enPassant >= 0) cle ^= T.zEnPassant[colonne(enPassant)];
+    enPassant = -1;
+    ++compteur50;
+    trait ^= 1;
+    cle ^= T.zTrait;
+}
+
+void Position::annulerNul(const Annulation& a) {
+    trait ^= 1;
+    --nbHistorique;
+    enPassant = a.enPassant; compteur50 = a.compteur50; cle = a.cle;
+}
+
+int Position::repetitions() const {
+    // Seules les positions depuis la dernière capture ou le dernier coup de pion peuvent se répéter
+    int n = 0;
+    const int fin = std::max(0, nbHistorique - compteur50);
+    for (int i = std::min(nbHistorique, MAX_HISTORIQUE) - 2; i >= fin; i -= 2)
+        if (historique[i] == cle) ++n;
+    return n;
+}
+
+bool Position::aDesPiecesLourdes(int camp) const {
+    for (int c = 0; c < 64; ++c) {
+        const int8_t p = plateau[c];
+        if (estAuCamp(p, camp) && std::abs(p) != PION && std::abs(p) != ROI) return true;
+    }
+    return false;
 }
 
 void Position::annuler(const Coup& m, const Annulation& a) {
@@ -301,10 +380,11 @@ void Position::annuler(const Coup& m, const Annulation& a) {
     }
     if (piece == s * ROI) caseRoi[trait] = m.de;
 
-    roque = a.roque; enPassant = a.enPassant; compteur50 = a.compteur50;
+    roque = a.roque; enPassant = a.enPassant; compteur50 = a.compteur50; cle = a.cle;
+    --nbHistorique;
 }
 
-uint64_t Position::hash() const {
+uint64_t Position::calculerCle() const {
     uint64_t h = 0;
     for (int c = 0; c < 64; ++c)
         if (plateau[c] != VIDE) h ^= T.zobrist[plateau[c] + 6][c];
