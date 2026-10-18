@@ -77,6 +77,12 @@ struct Position {
     void afficher() const;
 };
 
+// État d'une partie (pour l'arbitrage, pas pour la recherche)
+enum EtatPartie { EN_COURS, MAT, PAT, NULLE_REPETITION, NULLE_50_COUPS, NULLE_MATERIEL };
+EtatPartie etatPartie(Position& pos);
+bool materielInsuffisant(const Position& pos);
+
 char lettrePiece(int8_t p);
 std::string coupVersTexte(const Coup& m); // ex: "e2e4", "e7e8D"
+std::string coupVersUCI(const Coup& m);   // ex: "e2e4", "e7e8q"
 uint64_t perft(Position& pos, int profondeur);

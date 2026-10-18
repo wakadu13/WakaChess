@@ -1,0 +1,45 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'fr.wakachess'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'fr.wakachess'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '2.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Signée avec la clé de débogage pour pouvoir être installée directement (hors Play Store)
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // L'application embarque la version web (dossier docs/ à la racine du dépôt)
+    sourceSets {
+        main.assets.srcDirs += files("$buildDir/generated/web")
+    }
+}
+
+tasks.register('copierWeb', Copy) {
+    from "$rootDir/../docs"
+    exclude 'sw.js'
+    into "$buildDir/generated/web/www"
+}
+preBuild.dependsOn copierWeb
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

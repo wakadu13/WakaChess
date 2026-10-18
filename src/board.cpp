@@ -83,6 +83,31 @@ char lettrePiece(int8_t p) {
     return p < 0 ? static_cast<char>(l - 'A' + 'a') : l;
 }
 
+std::string coupVersUCI(const Coup& m) {
+    std::string s = coupVersTexte(m);
+    if (m.promo) s.back() = "..nbrq"[m.promo];
+    return s;
+}
+
+bool materielInsuffisant(const Position& pos) {
+    int mineures = 0;
+    for (int c = 0; c < 64; ++c) {
+        const int t = std::abs(pos.plateau[c]);
+        if (t == PION || t == TOUR || t == DAME) return false;
+        if (t == CAVALIER || t == FOU) ++mineures;
+    }
+    return mineures <= 1;
+}
+
+EtatPartie etatPartie(Position& pos) {
+    Coup liste[MAX_COUPS];
+    if (pos.genererLegaux(liste) == 0) return pos.enEchec(pos.trait) ? MAT : PAT;
+    if (pos.repetitions() >= 2) return NULLE_REPETITION;
+    if (pos.compteur50 >= 100) return NULLE_50_COUPS;
+    if (materielInsuffisant(pos)) return NULLE_MATERIEL;
+    return EN_COURS;
+}
+
 std::string coupVersTexte(const Coup& m) {
     std::string s;
     s += static_cast<char>('a' + colonne(m.de)); s += static_cast<char>('1' + rangee(m.de));

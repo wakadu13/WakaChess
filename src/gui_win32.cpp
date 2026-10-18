@@ -112,25 +112,15 @@ void lancerIA() {
     redessiner();
 }
 
-bool materielInsuffisant(const Position& p) {
-    int mineures = 0;
-    for (int c = 0; c < 64; ++c) {
-        const int t = std::abs(p.plateau[c]);
-        if (t == PION || t == TOUR || t == DAME) return false;
-        if (t == CAVALIER || t == FOU) ++mineures;
-    }
-    return mineures <= 1;
-}
-
 void verifierFin() {
-    const bool echec = J.pos.enEchec(J.pos.trait);
-    if (J.nbLegaux == 0)
-        J.resultat = echec ? (J.pos.trait == BLANC ? L"Échec et mat : les Noirs gagnent !" : L"Échec et mat : les Blancs gagnent !")
-                           : L"Pat : partie nulle.";
-    else if (J.pos.repetitions() >= 2) J.resultat = L"Partie nulle par triple répétition.";
-    else if (J.pos.compteur50 >= 100) J.resultat = L"Partie nulle (règle des 50 coups).";
-    else if (materielInsuffisant(J.pos)) J.resultat = L"Partie nulle (matériel insuffisant).";
-    else return;
+    switch (etatPartie(J.pos)) {
+        case MAT: J.resultat = J.pos.trait == BLANC ? L"Échec et mat : les Noirs gagnent !" : L"Échec et mat : les Blancs gagnent !"; break;
+        case PAT: J.resultat = L"Pat : partie nulle."; break;
+        case NULLE_REPETITION: J.resultat = L"Partie nulle par triple répétition."; break;
+        case NULLE_50_COUPS: J.resultat = L"Partie nulle (règle des 50 coups)."; break;
+        case NULLE_MATERIEL: J.resultat = L"Partie nulle (matériel insuffisant)."; break;
+        case EN_COURS: return;
+    }
     J.finie = true;
     redessiner();
     UpdateWindow(fenetre);

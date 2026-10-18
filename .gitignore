@@ -1,7 +1,7 @@
 # Build
 build/
 cmake-build-*/
-wakachess
+/wakachess
 *.o
 *.exe
 !bin/WakaChess.exe
@@ -11,3 +11,7 @@ wakachess
 .vscode/
 .idea/
 .DS_Store
+
+# Android
+.gradle/
+local.properties

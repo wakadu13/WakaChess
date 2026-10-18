@@ -21,13 +21,6 @@ void envoyer(const std::string& ligne) {
     std::cout << ligne << std::endl;
 }
 
-// Notation UCI : e2e4, e7e8q (lettres de promotion anglaises en minuscules)
-std::string coupVersUCI(const Coup& m) {
-    std::string s = coupVersTexte(m);
-    if (m.promo) s.back() = "..nbrq"[m.promo];
-    return s;
-}
-
 bool appliquerCoupUCI(Position& pos, const std::string& texte) {
     Coup legaux[MAX_COUPS];
     const int n = pos.genererLegaux(legaux);
