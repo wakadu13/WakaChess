@@ -59,6 +59,17 @@ select, button {
   cursor: pointer;
 }
 button:active, select:active { background: var(--bouton-actif); }
+/* Menu déroulant au même style partout (Safari/WebKit imposent sinon leur style natif, illisible ici) */
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 16px; /* en dessous de 16 px, Safari sur iPhone zoome la page au toucher */
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ececec' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+select option { background: #3b3936; color: var(--texte); }
 button:disabled { opacity: 0.45; cursor: default; }
 
 #plateau {

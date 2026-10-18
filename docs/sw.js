@@ -1,5 +1,5 @@
 // sw.js - Met l'application en cache pour qu'elle fonctionne hors ligne
-const CACHE = 'wakachess-v1';
+const CACHE = 'wakachess-v2';
 const FICHIERS = [
   './', 'index.html', 'style.css', 'app.js', 'moteur.js', 'wakachess.js',
   'manifest.webmanifest', 'icone-192.png', 'icone-512.png', 'apple-touch-icon.png',
